@@ -1,6 +1,6 @@
 {
   "name": "core-presentation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,11 +8,13 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run --config vitest.config.ts",
+    "test:e2e": "node scripts/smoke-editor.mjs",
     "typecheck": "tsc --noEmit",
     "export:html": "node scripts/export-html.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.5",
+    "playwright-core": "^1.65.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.4"

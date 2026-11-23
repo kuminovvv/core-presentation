@@ -1,10 +1,13 @@
 import {
   PresentationPlayer, PresentationStore, addElement, addSlide, createElement, createSlide,
-  createSlideNode, deleteElement, deleteSlide, duplicateSlide,
+  createSlideNode, deleteElement, deleteSlide, duplicateSlide, duplicateElements,
+  groupElements, ungroupElements, reorderElements, updateElements,
   parsePresentation, serializePresentation, updateElement,
 } from "../src";
 import type { ElementKind, Presentation, Slide, SlideElement } from "../src";
 import { demoPresentation } from "../src/demo";
+import { CanvasInteractions } from "./canvas-interactions";
+import { unionBounds } from "../src/editor/geometry";
 import "./style.css";
 
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -20,21 +23,25 @@ const shell = $<HTMLDivElement>("stage-shell");
 const props = $<HTMLDivElement>("properties");
 const overlay = $<HTMLDivElement>("preview-overlay");
 let slideId = demoPresentation.slides[0]!.id;
-let selectedId: string | null = null;
 let scale = 1;
 let player: PresentationPlayer | null = null;
+const canvas = new CanvasInteractions(stage, {
+  project: () => store.value,
+  slideId: () => slideId,
+  scale: () => scale,
+  commit: patches => store.update(project => updateElements(project, patches)),
+  selectionChanged: () => { renderProperties(); renderTimeline(); },
+});
 
 function selected(): { project: Presentation; slide?: Slide; element?: SlideElement } {
   const project = store.value;
   const slide = project.slides.find(s => s.id === slideId);
-  return { project, slide, element: slide?.elements.find(e => e.id === selectedId) };
+  return { project, slide, element: slide?.elements.find(e => e.id === canvas.primaryId) };
 }
 
 function render(): void {
   const project = store.value;
   if (!project.slides.some(s => s.id === slideId)) slideId = project.slides[0]?.id ?? "";
-  if (!project.slides.find(s => s.id === slideId)?.elements.some(e => e.id === selectedId))
-    selectedId = null;
   $<HTMLInputElement>("project-title").value = project.title;
   $("slide-counter").textContent = `Слайд ${Math.max(0, project.slides.findIndex(s => s.id === slideId) + 1)} из ${project.slides.length}`;
   $<HTMLButtonElement>("undo").disabled = !store.canUndo;
@@ -48,7 +55,7 @@ function render(): void {
     row.innerHTML = `<span class="slide-number">${String(index + 1).padStart(2,"0")}</span>
       <span class="slide-thumb" style="background:${escape(slide.background)}"><span>${escape(slide.name)}</span></span>
       <span class="slide-title">${escape(slide.name)}</span>`;
-    row.addEventListener("click", () => { slideId = slide.id; selectedId = null; render(); });
+    row.addEventListener("click", () => { slideId = slide.id; canvas.clear(); render(); });
     list.append(row);
   });
   stage.replaceChildren();
@@ -57,9 +64,10 @@ function render(): void {
   const current = project.slides.find(s => s.id === slideId);
   if (current) stage.append(createSlideNode(current, project));
   stage.querySelectorAll("iframe").forEach(iframe => iframe.style.pointerEvents = "none");
-  highlight();
   fit();
+  canvas.refresh();
   renderProperties();
+  renderTimeline();
 }
 
 function fit(): void {
@@ -70,11 +78,6 @@ function fit(): void {
   const y = (shell.clientHeight - height * scale) / 2;
   stage.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
   $("zoom").textContent = `Масштаб ${Math.round(scale * 100)}%`;
-}
-
-function highlight(): void {
-  stage.querySelectorAll<HTMLElement>(".cp-element").forEach(node =>
-    node.classList.toggle("chosen", node.dataset.elementId === selectedId));
 }
 
 function field(label: string, key: string, value: string | number | undefined, type = "text"): string {
@@ -92,6 +95,32 @@ function renderProperties(): void {
   const { slide, element } = selected();
   if (!slide) {
     props.innerHTML = '<div class="empty-note">Добавьте первый слайд.</div>';
+    return;
+  }
+  if (canvas.ids.length > 1) {
+    const elements = slide.elements.filter(e => canvas.ids.includes(e.id));
+    const groups = new Set(elements.map(e => e.groupId));
+    const alreadyGrouped = groups.size === 1 && Boolean(elements[0]?.groupId);
+    props.innerHTML = `<div class="property-title">Выделено: ${elements.length}</div>
+      <div class="property-help">Shift + щелчок или выделение рамкой · Ctrl+G для группы</div>
+      <div class="property-section">ВЫРАВНИВАНИЕ</div>
+      <div class="align-grid">
+        <button data-action="align-left" title="По левому краю">⇤ Слева</button>
+        <button data-action="align-center-x" title="По центру горизонтально">↔ Центр</button>
+        <button data-action="align-right" title="По правому краю">Справа ⇥</button>
+        <button data-action="align-top" title="По верхнему краю">⇡ Сверху</button>
+        <button data-action="align-center-y" title="По центру вертикально">↕ Центр</button>
+        <button data-action="align-bottom" title="По нижнему краю">Снизу ⇣</button>
+      </div>
+      <div class="property-section">КОМПОНОВКА</div>
+      <div class="inspector-actions">
+        <button data-action="${alreadyGrouped ? "ungroup" : "group"}">${alreadyGrouped ? "Разгруппировать" : "Сгруппировать · Ctrl+G"}</button>
+        <button data-action="front">На передний план</button>
+        <button data-action="back">На задний план</button>
+        <button data-action="duplicate">Дублировать · Ctrl+D</button>
+        <button class="danger" data-action="delete">Удалить выбранное</button>
+      </div>`;
+    bindActions();
     return;
   }
   if (!element) {
@@ -133,14 +162,104 @@ function renderProperties(): void {
       ${pick("Анимация","animation",element.animation?.type ?? "none",["none","fade","slide-up","zoom"])}
       ${field("Задержка, мс","animationDelay",element.animation?.delay ?? 0,"number")}
       ${field("Длительность, мс","animationDuration",element.animation?.duration ?? 600,"number")}
-      <div class="inspector-actions"><button class="danger" id="delete-element">Удалить элемент</button></div>`;
-    $("delete-element").addEventListener("click", () => {
-      selectedId = null;
-      store.update(project => deleteElement(project, element.id));
-    });
+      <div class="property-section">КОМПОНОВКА</div>
+      <div class="inspector-actions">
+        ${element.groupId ? '<button data-action="ungroup">Разгруппировать</button>' : ""}
+        <button data-action="front">На передний план</button>
+        <button data-action="back">На задний план</button>
+        <button data-action="duplicate">Дублировать · Ctrl+D</button>
+        <button class="danger" data-action="delete">Удалить элемент</button>
+      </div>`;
+    bindActions();
   }
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
     .forEach(input => input.addEventListener("change", () => applyProperty(input)));
+}
+
+function renderTimeline(): void {
+  const timeline = $("timeline-rows");
+  const slide = selected().slide;
+  timeline.replaceChildren();
+  if (!slide) return;
+  if (!slide.elements.length) {
+    timeline.innerHTML = '<div class="timeline-empty">Добавьте элементы на слайд, чтобы настроить анимацию.</div>';
+    return;
+  }
+  for (const element of slide.elements) {
+    const duration = element.animation?.duration ?? 600;
+    const delay = element.animation?.delay ?? 0;
+    const active = element.animation && element.animation.type !== "none";
+    const row = document.createElement("div");
+    row.className = "timeline-row" + (canvas.ids.includes(element.id) ? " active" : "");
+    row.innerHTML = `
+      <button type="button" class="timeline-object" title="${escape(element.id)}">${escape(
+        element.type === "text" ? element.text.slice(0, 25) : element.type.toUpperCase())}</button>
+      <div class="timeline-track">${active
+        ? `<div class="timeline-bar" style="left:${Math.min(100, delay / 25)}%;width:${Math.min(100, duration / 25)}%" title="${escape(element.animation?.type)} · ${delay}–${delay + duration} мс"></div>`
+        : '<span class="timeline-none">Без анимации</span>'}</div>
+      <input type="number" class="timeline-number" data-timeline="delay" min="0" max="10000" step="50" aria-label="Задержка анимации" value="${delay}" title="Задержка, мс">
+      <input type="number" class="timeline-number" data-timeline="duration" min="0" max="10000" step="50" aria-label="Длительность анимации" value="${duration}" title="Длительность, мс">`;
+    row.querySelector(".timeline-object")!.addEventListener("click", () => canvas.select([element.id]));
+    row.querySelectorAll<HTMLInputElement>("input").forEach(input => input.addEventListener("change", () => {
+      const value = Math.max(0, Math.min(10000, Number(input.value) || 0));
+      const animation = element.animation ?? { type: "fade" as const, duration: 600, delay: 0 };
+      const patch = { animation: { ...animation, [input.dataset.timeline!]: value } };
+      store.update(project => updateElement(project, element.id, patch));
+    }));
+    timeline.append(row);
+  }
+}
+
+function bindActions(): void {
+  props.querySelectorAll<HTMLButtonElement>("[data-action]").forEach(button =>
+    button.addEventListener("click", () => runAction(button.dataset.action!)));
+}
+
+function runAction(action: string): void {
+  const { slide } = selected();
+  if (!slide || !canvas.ids.length) return;
+  const ids = canvas.ids;
+  const elements = slide.elements.filter(e => ids.includes(e.id));
+  if (action === "delete") {
+    canvas.clear();
+    store.update(project => ids.reduce((doc, id) => deleteElement(doc, id), project));
+    return;
+  }
+  if (action === "duplicate") {
+    let copies: string[] = [];
+    store.update(project => {
+      const result = duplicateElements(project, slide.id, ids);
+      copies = result.ids;
+      return result.project;
+    });
+    canvas.select(copies);
+    return;
+  }
+  if (action === "group") {
+    store.update(project => groupElements(project, slide.id, ids));
+    return;
+  }
+  if (action === "ungroup") {
+    store.update(project => ungroupElements(project, slide.id, ids));
+    return;
+  }
+  if (action === "front" || action === "back") {
+    store.update(project => reorderElements(project, slide.id, ids, action));
+    return;
+  }
+  if (action.startsWith("align-") && elements.length > 1) {
+    const bounds = unionBounds(elements);
+    const patches: Record<string, Partial<SlideElement>> = {};
+    for (const e of elements) {
+      if (action === "align-left") patches[e.id] = { x: bounds.x };
+      if (action === "align-center-x") patches[e.id] = { x: bounds.x + (bounds.width - e.width) / 2 };
+      if (action === "align-right") patches[e.id] = { x: bounds.x + bounds.width - e.width };
+      if (action === "align-top") patches[e.id] = { y: bounds.y };
+      if (action === "align-center-y") patches[e.id] = { y: bounds.y + (bounds.height - e.height) / 2 };
+      if (action === "align-bottom") patches[e.id] = { y: bounds.y + bounds.height - e.height };
+    }
+    store.update(project => updateElements(project, patches));
+  }
 }
 
 function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): void {
@@ -185,45 +304,9 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
 function add(kind: ElementKind): void {
   if (!slideId) return;
   const element = createElement(kind);
-  selectedId = element.id;
   store.update(project => addElement(project, slideId, element));
+  canvas.select([element.id]);
 }
-
-stage.addEventListener("pointerdown", event => {
-  const node = (event.target as HTMLElement).closest<HTMLElement>("[data-element-id]");
-  if (!node || !node.dataset.elementId) {
-    selectedId = null; highlight(); renderProperties(); return;
-  }
-  selectedId = node.dataset.elementId;
-  highlight();
-  renderProperties();
-  if (event.button !== 0) return;
-  const { element } = selected();
-  if (!element) return;
-  const origin = { x: element.x, y: element.y, px: event.clientX, py: event.clientY };
-  let changed = false;
-  node.setPointerCapture(event.pointerId);
-  const move = (e: PointerEvent) => {
-    const dx = (e.clientX - origin.px) / scale;
-    const dy = (e.clientY - origin.py) / scale;
-    changed ||= Math.abs(dx) > 1 || Math.abs(dy) > 1;
-    node.style.left = Math.round(origin.x + dx) + "px";
-    node.style.top = Math.round(origin.y + dy) + "px";
-  };
-  const finish = (e: PointerEvent) => {
-    node.removeEventListener("pointermove", move);
-    node.removeEventListener("pointerup", finish);
-    node.removeEventListener("pointercancel", cancel);
-    if (!changed) return;
-    const x = Math.round(origin.x + (e.clientX - origin.px) / scale);
-    const y = Math.round(origin.y + (e.clientY - origin.py) / scale);
-    store.update(project => updateElement(project, element.id, { x, y }));
-  };
-  const cancel = () => { node.removeEventListener("pointermove", move); node.removeEventListener("pointerup", finish); render(); };
-  node.addEventListener("pointermove", move);
-  node.addEventListener("pointerup", finish);
-  node.addEventListener("pointercancel", cancel, { once: true });
-});
 
 function download(name: string, content: string): void {
   const blob = new Blob([content], { type: "application/json;charset=utf-8" });
@@ -252,13 +335,20 @@ function closePreview(): void {
 
 $("add-slide").addEventListener("click", () => {
   const slide = createSlide(`Слайд ${store.value.slides.length + 1}`);
-  slideId = slide.id; selectedId = null;
+  slideId = slide.id; canvas.clear();
   store.update(project => addSlide(project, slide));
 });
 $("add-text").addEventListener("click", () => add("text"));
 $("add-shape").addEventListener("click", () => add("shape"));
 $("add-image").addEventListener("click", () => add("image"));
 $("add-html").addEventListener("click", () => add("html"));
+$("timeline-toggle").addEventListener("click", () => {
+  const panel = $("timeline-panel");
+  panel.hidden = !panel.hidden;
+  $("timeline-toggle").setAttribute("aria-expanded", String(!panel.hidden));
+  renderTimeline();
+  fit();
+});
 $("undo").addEventListener("click", () => store.undo());
 $("redo").addEventListener("click", () => store.redo());
 $<HTMLInputElement>("project-title").addEventListener("change", event => {
@@ -274,7 +364,7 @@ $<HTMLInputElement>("import-file").addEventListener("change", async event => {
   if (!file) return;
   try {
     const project = parsePresentation(await file.text());
-    slideId = project.slides[0]?.id ?? ""; selectedId = null;
+    slideId = project.slides[0]?.id ?? ""; canvas.clear();
     store.replace(project);
   } catch (error) { alert(`Не удалось открыть проект: ${error instanceof Error ? error.message : String(error)}`); }
   input.value = "";
@@ -285,15 +375,37 @@ $("preview-next").addEventListener("click", () => { void player?.next(); });
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
   if (event.key === "Escape" && player) { closePreview(); return; }
-  const typing = /INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement)?.tagName ?? "");
+  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable='true']"));
   if (typing || player) return;
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+  const command = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
+  if (command && key === "s") {
     event.preventDefault(); download("presentation.json", serializePresentation(store.value));
-  } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+  } else if (command && key === "z") {
     event.preventDefault(); if (event.shiftKey) store.redo(); else store.undo();
-  } else if ((event.key === "Delete" || event.key === "Backspace") && selectedId) {
-    const id = selectedId; selectedId = null;
-    store.update(project => deleteElement(project, id));
+  } else if (command && key === "y") {
+    event.preventDefault(); store.redo();
+  } else if (command && key === "a") {
+    event.preventDefault(); canvas.select(selected().slide?.elements.map(el => el.id) ?? []);
+  } else if (command && key === "g" && canvas.ids.length) {
+    event.preventDefault(); runAction(event.shiftKey ? "ungroup" : "group");
+  } else if (command && key === "d" && canvas.ids.length) {
+    event.preventDefault(); runAction("duplicate");
+  } else if (event.key === "Escape") {
+    canvas.clear();
+  } else if ((event.key === "Delete" || event.key === "Backspace") && canvas.ids.length) {
+    event.preventDefault(); runAction("delete");
+  } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key) && canvas.ids.length) {
+    event.preventDefault();
+    const distance = event.shiftKey ? 10 : 1;
+    const dx = event.key === "ArrowLeft" ? -distance : event.key === "ArrowRight" ? distance : 0;
+    const dy = event.key === "ArrowUp" ? -distance : event.key === "ArrowDown" ? distance : 0;
+    const ids = canvas.ids;
+    const patches: Record<string, Partial<SlideElement>> = {};
+    for (const el of selected().slide?.elements ?? []) {
+      if (ids.includes(el.id)) patches[el.id] = { x: el.x + dx, y: el.y + dy };
+    }
+    store.update(project => updateElements(project, patches));
   }
 });
 store.subscribe(render);

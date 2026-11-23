@@ -34,12 +34,18 @@
             <button id="add-shape">▢ <span>Фигура</span></button>
             <button id="add-image">▧ <span>Изображение</span></button>
             <button id="add-html">⌘ <span>HTML / JS</span></button>
+            <span class="separator"></span>
+            <button id="timeline-toggle" aria-expanded="false" title="Показать временную шкалу анимаций">◷ <span>Анимации</span></button>
             <div class="tools-spacer"></div>
-            <span class="hint">Перетаскивайте элементы мышью</span>
+            <span class="hint">Shift · множественный выбор</span>
           </div>
           <div id="stage-shell" class="stage-shell">
             <div id="editor-stage" class="editor-stage" aria-label="Холст слайда"></div>
           </div>
+          <section id="timeline-panel" class="timeline-panel" aria-label="Временная шкала анимаций" hidden>
+            <div class="timeline-header"><span>АНИМАЦИИ СЛАЙДА</span><span>0 мс</span><span>500</span><span>1000</span><span>1500</span><span>2000+</span></div>
+            <div id="timeline-rows" class="timeline-rows"></div>
+          </section>
           <div class="status"><span id="slide-counter"></span><span>1600 × 900 · 16:9</span><span id="zoom"></span></div>
         </main>
         <aside class="inspector">

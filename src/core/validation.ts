@@ -61,6 +61,8 @@ export function validatePresentation(input: unknown): asserts input is Presentat
           if (element[key] !== undefined && !num(element[key]))
             fail(p + "." + key, "must be finite");
         }
+        if (element.groupId !== undefined && (!str(element.groupId) || !element.groupId.trim()))
+          fail(p + ".groupId", "must be a non-empty string");
         if (element.type === "text" && !str(element.text)) fail(p + ".text", "required string");
         if (element.type === "image" && !str(element.src)) fail(p + ".src", "required string");
         if (element.type === "html" && !str(element.html)) fail(p + ".html", "required string");

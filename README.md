@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.1 alpha. The engine, minimal visual studio and offline HTML export are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.2 alpha. Engine, visual studio, grouping, alignment guides, animation timeline and standalone HTML export are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -19,7 +19,31 @@ npm run dev
 
 Open the local URL printed by Vite (normally **http://127.0.0.1:5173/**). The studio starts with a three-slide demo.
 
-The visual editor supports adding and removing slides; adding text, shapes, image URLs and HTML/JS blocks; selecting and dragging elements; editing properties; undo/redo; importing/exporting JSON; and previewing the presentation with transitions and animations. It is a first iteration: resizing by handles, multi-select, templates, timelines, asset management and native desktop interfaces are future work.
+The visual editor supports adding and removing slides; adding text, shapes, image URLs and HTML/JS blocks; dragging, resizing and rotating elements; multi-selection, grouping, alignment, snapping guides, z-index controls; editing properties; undo/redo; importing/exporting JSON; and previewing presentations with transitions and animations.
+
+### Visual editing & shortcuts
+
+| Gesture / Shortcut | Action |
+| --- | --- |
+| Drag element | Move; smart guides snap to slide center, edges and other elements |
+| Drag a white square | Resize selected element or whole selection |
+| Drag the cyan circular handle | Rotate selection (Shift: snap to 15° increments) |
+| Shift + click | Add or remove element/group from selection |
+| Drag empty canvas | Marquee-select intersecting objects |
+| Alt + drag element | Move without smart snapping |
+| Ctrl/Cmd + A | Select all elements on the current slide |
+| Ctrl/Cmd + G | Group selected elements |
+| Ctrl/Cmd + Shift + G | Ungroup |
+| Ctrl/Cmd + D | Duplicate selected elements |
+| Arrow keys / Shift + arrows | Nudge 1 px / 10 px |
+| Ctrl/Cmd + Z or Y | Undo / redo (Shift + Z also redoes) |
+| Delete / Backspace | Delete selected elements |
+| Escape | Clear selection or exit preview |
+
+The inspector provides exact X/Y/size, colors, rotation, layer ordering and 6 alignment commands.
+Select **Анимации** in the canvas toolbar to open a basic timeline: inspect per-element tracks and edit animation delays/durations in milliseconds. Choose animation type in the properties panel.
+
+Limitations in v0.2: rotation and resizing are supported, but rotated multi-selection uses logical unrotated group bounds for alignment and resizing; no aspect-ratio lock, multi-user collaboration, image asset embedding, keyframe timeline or native Rust UI yet.
 
 ## Export a presentation to a single HTML file
 
@@ -40,6 +64,8 @@ src/
     validation.ts   Input checking, JSON parsing/serialization
     document.ts     Immutable editing functions, agent API
     store.ts        Undo/redo, event subscription
+  editor/
+    geometry.ts     Pure resize, rotate, snap and marquee functions
   renderer/
     dom.ts          HTML element rendering, sandboxed widgets
     player.ts       Presentation navigation, transitions, animations
@@ -50,13 +76,16 @@ src/
 web/
   index.html        Studio interface
   main.ts           First visual editor implementation
+  canvas-interactions.ts  Canvas manipulation / selection controller
   style.css
 scripts/
   export-html.mjs   Single-file HTML export
+  smoke-editor.mjs  Real Chrome editor gesture test
 examples/
   basic.json        Open-format presentation with interactive JS
 tests/
   core.test.ts      Schema, editing, undo/redo coverage
+  geometry.test.ts  Geometry, grouping, layer and snapping tests
 ```
 
 ### JSON schema
@@ -112,6 +141,8 @@ deck = updateElement(deck, headline.id, { x: 200, fontSize: 96 });
 console.log(serializePresentation(deck));
 ```
 
+The same API also exposes `updateElements` for atomic multi-element operations, `groupElements`, `ungroupElements`, `reorderElements`, `duplicateElements`, and pure geometry helpers such as `resizeElements`, `rotateElements`, and `snapMove`. All are usable from TypeScript without the web editor. Group membership persists as an optional `groupId` string on each element.
+
 The `PresentationStore` class provides history and subscriptions. A dedicated MCP server can be built on this API later without redesigning the document model.
 
 ### Custom HTML / CSS / JS components
@@ -130,15 +161,16 @@ The source-of-truth is an intentionally language-neutral JSON document (format v
 npm run typecheck
 npm test
 npm run build
+npm run test:e2e
 ```
 
-GitHub Actions runs type checking, tests, production build and standalone export on each push to `main` and pull request.
+The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, production build and standalone export on each push to `main` and pull request.
 
 ## Planned work
 
-- Full visual-editor interactions: resize, rotate handles, selection groups and alignment guides.
+- Rich editor interactions: aspect-ratio locking, precision rotated-group bounds, editable selection handles for skew, distributions and rulers.
 - Rich text, typography, asset library, charts and reusable components.
-- Animation timeline, triggers and advanced transitions.
+- Advanced keyframe animation timeline, triggers and additional transitions.
 - Dedicated command protocol/MCP integration for AI agents.
 - Offline file/project manager and improved export/asset packaging.
 - Native Rust application **after** the engine and web editor have matured.

@@ -84,6 +84,91 @@ export function updateElement(project: Presentation, elementId: string, patch: P
   return next;
 }
 
+/** Apply a multi-element gesture as one validated, undoable history entry. */
+export function updateElements(
+  project: Presentation,
+  patches: Readonly<Record<string, Partial<SlideElement>>>,
+): Presentation {
+  const next = structuredClone(project);
+  const targets = new Map(next.slides.flatMap(s => s.elements).map(e => [e.id, e]));
+  for (const [id, patch] of Object.entries(patches)) {
+    const element = targets.get(id);
+    if (!element) throw new Error(`Element not found: ${id}`);
+    if (patch.id !== undefined && patch.id !== id) throw new Error("Changing element IDs is not supported");
+    if (patch.type !== undefined && patch.type !== element.type) throw new Error("Changing element types is not supported");
+    Object.assign(element, patch);
+  }
+  validatePresentation(next);
+  return next;
+}
+
+/** Stores an explicit group identity without flattening elements into a bitmap. */
+export function groupElements(project: Presentation, slideId: string, ids: string[]): Presentation {
+  const slide = project.slides.find(s => s.id === slideId);
+  const chosen = new Set(ids);
+  if (!slide || chosen.size < 2 || slide.elements.filter(e => chosen.has(e.id)).length !== chosen.size)
+    throw new Error("Select at least two elements on the same slide");
+  const groupId = newId("group");
+  const patches: Record<string, Partial<SlideElement>> = {};
+  for (const id of ids) patches[id] = { groupId };
+  return updateElements(project, patches);
+}
+
+export function ungroupElements(project: Presentation, slideId: string, ids: string[]): Presentation {
+  const slide = project.slides.find(s => s.id === slideId);
+  if (!slide) throw new Error(`Slide not found: ${slideId}`);
+  const affected = new Set(ids);
+  const groupIds = new Set(slide.elements.filter(e => affected.has(e.id)).map(e => e.groupId).filter(Boolean));
+  const patches: Record<string, Partial<SlideElement>> = {};
+  for (const element of slide.elements) {
+    if (affected.has(element.id) || (element.groupId && groupIds.has(element.groupId)))
+      patches[element.id] = { groupId: undefined };
+  }
+  return updateElements(project, patches);
+}
+
+export function reorderElements(
+  project: Presentation, slideId: string, ids: string[], direction: "front" | "back",
+): Presentation {
+  const slide = project.slides.find(s => s.id === slideId);
+  if (!slide) throw new Error(`Slide not found: ${slideId}`);
+  const selected = new Set(ids);
+  if (slide.elements.filter(e => selected.has(e.id)).length !== selected.size)
+    throw new Error("Elements must belong to the same slide");
+  const ordered = slide.elements.map((e, i) => ({ id: e.id, index: i, z: e.zIndex ?? 0 }))
+    .sort((a, b) => a.z - b.z || a.index - b.index);
+  const front = ordered.filter(e => selected.has(e.id));
+  const back = ordered.filter(e => !selected.has(e.id));
+  const sorted = direction === "front" ? [...back, ...front] : [...front, ...back];
+  const patches: Record<string, Partial<SlideElement>> = {};
+  sorted.forEach((e, i) => patches[e.id] = { zIndex: i });
+  return updateElements(project, patches);
+}
+
+export function duplicateElements(
+  project: Presentation, slideId: string, ids: string[], offset = 24,
+): { project: Presentation; ids: string[] } {
+  const next = structuredClone(project);
+  const slide = next.slides.find(s => s.id === slideId);
+  if (!slide) throw new Error(`Slide not found: ${slideId}`);
+  const selected = new Set(ids);
+  const copies = slide.elements.filter(e => selected.has(e.id)).map(e => structuredClone(e));
+  if (copies.length !== selected.size) throw new Error("Elements must belong to the same slide");
+  const groups = new Map<string, string>();
+  for (const copy of copies) {
+    copy.id = newId("element");
+    copy.x += offset;
+    copy.y += offset;
+    if (copy.groupId) {
+      if (!groups.has(copy.groupId)) groups.set(copy.groupId, newId("group"));
+      copy.groupId = groups.get(copy.groupId);
+    }
+  }
+  slide.elements.push(...copies);
+  validatePresentation(next);
+  return { project: next, ids: copies.map(e => e.id) };
+}
+
 export function deleteElement(project: Presentation, elementId: string): Presentation {
   const next = structuredClone(project);
   const slide = next.slides.find(s => s.elements.some(e => e.id === elementId));

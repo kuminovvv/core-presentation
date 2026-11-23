@@ -7,6 +7,8 @@ export type Transition = { type: TransitionKind; duration?: number };
 export interface ElementBase {
   id: string; x: number; y: number; width: number; height: number;
   rotation?: number; opacity?: number; zIndex?: number; animation?: Entrance;
+  /** Elements sharing a groupId can be selected and transformed together. */
+  groupId?: string;
 }
 export interface TextElement extends ElementBase {
   type: "text"; text: string; color?: string; fontFamily?: string;
