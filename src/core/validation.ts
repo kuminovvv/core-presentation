@@ -1,0 +1,92 @@
+import type { Presentation } from "./types";
+
+export class PresentationValidationError extends Error {
+  constructor(public readonly issues: string[]) {
+    super(issues.join("\n"));
+    this.name = "PresentationValidationError";
+  }
+}
+const obj = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+const str = (v: unknown): v is string => typeof v === "string";
+const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const oneOf = (v: unknown, values: string[]) => values.includes(String(v));
+
+export function validatePresentation(input: unknown): asserts input is Presentation {
+  const errors: string[] = [];
+  const fail = (path: string, reason: string) => errors.push(`${path}: ${reason}`);
+  if (!obj(input)) throw new PresentationValidationError(["presentation must be an object"]);
+  if (input.version !== 1) fail("version", "must equal 1");
+  if (!str(input.id) || !input.id.trim()) fail("id", "required string");
+  if (!str(input.title)) fail("title", "required string");
+  if (!obj(input.viewport) || !num(input.viewport.width) || !num(input.viewport.height) ||
+      input.viewport.width <= 0 || input.viewport.height <= 0) {
+    fail("viewport", "requires positive finite width and height");
+  }
+  if (!Array.isArray(input.slides)) fail("slides", "required array");
+  else {
+    const ids = new Set<string>();
+    const checkId = (id: unknown, path: string) => {
+      if (!str(id) || !id.trim()) fail(path, "required string");
+      else if (ids.has(id)) fail(path, "duplicate id");
+      else ids.add(id);
+    };
+    input.slides.forEach((slide: unknown, i: number) => {
+      const path = `slides[${i}]`;
+      if (!obj(slide)) { fail(path, "must be object"); return; }
+      checkId(slide.id, path + ".id");
+      if (!str(slide.name)) fail(path + ".name", "required string");
+      if (!str(slide.background)) fail(path + ".background", "required CSS string");
+      if (slide.transition !== undefined) {
+        if (!obj(slide.transition) || !oneOf(slide.transition.type, ["none","fade","slide","zoom"]))
+          fail(path + ".transition", "unknown transition");
+        else if (slide.transition.duration !== undefined &&
+          (!num(slide.transition.duration) || slide.transition.duration < 0))
+          fail(path + ".transition.duration", "must be non-negative");
+      }
+      if (!Array.isArray(slide.elements)) { fail(path + ".elements", "required array"); return; }
+      slide.elements.forEach((element: unknown, j: number) => {
+        const p = `${path}.elements[${j}]`;
+        if (!obj(element)) { fail(p, "must be object"); return; }
+        checkId(element.id, p + ".id");
+        if (!oneOf(element.type, ["text","shape","image","html"])) {
+          fail(p + ".type", "unknown element"); return;
+        }
+        for (const key of ["x","y","width","height"]) {
+          if (!num(element[key]) ||
+             ((key === "width" || key === "height") && (element[key] as number) <= 0))
+            fail(p + "." + key, "must be finite; dimensions must be positive");
+        }
+        for (const key of ["rotation","opacity","zIndex"]) {
+          if (element[key] !== undefined && !num(element[key]))
+            fail(p + "." + key, "must be finite");
+        }
+        if (element.type === "text" && !str(element.text)) fail(p + ".text", "required string");
+        if (element.type === "image" && !str(element.src)) fail(p + ".src", "required string");
+        if (element.type === "html" && !str(element.html)) fail(p + ".html", "required string");
+        if (element.animation !== undefined) {
+          if (!obj(element.animation) ||
+              !oneOf(element.animation.type, ["none","fade","slide-up","zoom"]))
+            fail(p + ".animation", "unknown animation");
+          else for (const key of ["duration","delay"]) {
+            const x = element.animation[key];
+            if (x !== undefined && (!num(x) || x < 0))
+              fail(p + ".animation." + key, "must be non-negative");
+          }
+        }
+      });
+    });
+  }
+  if (errors.length) throw new PresentationValidationError(errors);
+}
+
+export function parsePresentation(json: string): Presentation {
+  const value: unknown = JSON.parse(json);
+  validatePresentation(value);
+  return value;
+}
+
+export function serializePresentation(value: Presentation): string {
+  validatePresentation(value);
+  return JSON.stringify(value, null, 2);
+}

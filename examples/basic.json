@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "hello-project",
+  "title": "Hello from Core Presentation",
+  "viewport": { "width": 1600, "height": 900 },
+  "slides": [
+    {
+      "id": "intro",
+      "name": "Hello",
+      "background": "linear-gradient(120deg,#101a30,#263567)",
+      "transition": { "type": "fade", "duration": 500 },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text",
+          "text": "Presentation as code.",
+          "x": 100, "y": 300, "width": 1300, "height": 160,
+          "fontSize": 98, "fontWeight": 700, "color": "#ffffff",
+          "animation": { "type": "slide-up", "duration": 600 }
+        },
+        {
+          "id": "subtitle",
+          "type": "text",
+          "text": "HTML · CSS · JavaScript",
+          "x": 110, "y": 530, "width": 1000, "height": 80,
+          "fontSize": 42, "color": "#b8c6ff"
+        }
+      ]
+    },
+    {
+      "id": "interactive",
+      "name": "JavaScript",
+      "background": "#111a2c",
+      "transition": { "type": "slide", "duration": 550 },
+      "elements": [
+        {
+          "id": "interactive-title",
+          "type": "text",
+          "text": "Yes, JavaScript works.",
+          "x": 100, "y": 120, "width": 1200, "height": 130,
+          "fontSize": 76, "color": "#ffffff"
+        },
+        {
+          "id": "interactive-widget",
+          "type": "html",
+          "x": 200, "y": 330, "width": 1000, "height": 350,
+          "html": "<button id='action'>Click to count: 0</button>",
+          "css": "html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#222e52}button{font:700 36px system-ui;border:0;border-radius:18px;padding:30px;background:#b6bcff;color:#141b3b;cursor:pointer}",
+          "javascript": "let count=0; document.getElementById('action').onclick=e=>{e.target.textContent='Click to count: '+(++count)}"
+        }
+      ]
+    }
+  ]
+}

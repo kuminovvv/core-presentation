@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#111827" />
+    <title>Core Presentation — Studio</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">C<span>●</span></span><span>core<span class="brand-muted">/presentation</span></span><span class="tag">ALPHA</span></div>
+        <div class="project-name"><input id="project-title" aria-label="Название презентации" maxlength="140" /></div>
+        <div class="toolbar right">
+          <button id="undo" title="Отменить (Ctrl+Z)">↶</button>
+          <button id="redo" title="Повторить (Ctrl+Shift+Z)">↷</button>
+          <span class="separator"></span>
+          <label for="import-file" class="button secondary">Импорт JSON</label>
+          <input id="import-file" type="file" accept=".json,application/json" hidden />
+          <button id="save" class="secondary">Сохранить JSON</button>
+          <button id="preview" class="primary">▶ Предпросмотр</button>
+        </div>
+      </header>
+      <div class="app-body">
+        <aside class="sidebar">
+          <div class="panel-head"><span>СЛАЙДЫ</span><button id="add-slide" title="Добавить слайд">＋</button></div>
+          <div id="slide-list" class="slide-list"></div>
+          <div class="sidebar-bottom">OPEN FORMAT · HTML/CSS/JS</div>
+        </aside>
+        <main class="workspace">
+          <div class="tools">
+            <span class="tools-label">Добавить</span>
+            <button id="add-text">T <span>Текст</span></button>
+            <button id="add-shape">▢ <span>Фигура</span></button>
+            <button id="add-image">▧ <span>Изображение</span></button>
+            <button id="add-html">⌘ <span>HTML / JS</span></button>
+            <div class="tools-spacer"></div>
+            <span class="hint">Перетаскивайте элементы мышью</span>
+          </div>
+          <div id="stage-shell" class="stage-shell">
+            <div id="editor-stage" class="editor-stage" aria-label="Холст слайда"></div>
+          </div>
+          <div class="status"><span id="slide-counter"></span><span>1600 × 900 · 16:9</span><span id="zoom"></span></div>
+        </main>
+        <aside class="inspector">
+          <div class="panel-head">СВОЙСТВА</div>
+          <div id="properties" class="properties"></div>
+        </aside>
+      </div>
+    </div>
+    <div id="preview-overlay" class="preview-overlay" hidden>
+      <div id="preview-surface" class="preview-surface"></div>
+      <div class="preview-controls">
+        <button id="preview-back">←</button>
+        <span id="preview-counter">1 / 1</span>
+        <button id="preview-next">→</button>
+        <button id="preview-close" class="preview-close">✕ Закрыть</button>
+      </div>
+    </div>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>
