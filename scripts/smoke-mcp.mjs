@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { readFile, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { readFile, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -112,7 +112,9 @@ try {
     "MCP render_slide returns a real PNG image");
   check(png.readUInt32BE(16) === 1600 && png.readUInt32BE(20) === 900,
     "Rendered screenshot matches slide viewport");
-  await writeFile(resolve(root, ".artifacts", "mcp-preview.png"), png);
+  const artifacts = resolve(root, ".artifacts");
+  await mkdir(artifacts, { recursive: true });
+  await writeFile(join(artifacts, "mcp-preview.png"), png);
 
   const exported = (await call("presentation_export_html", { project: "agent-demo" })).body;
   const html = await readFile(exported.file, "utf8");
