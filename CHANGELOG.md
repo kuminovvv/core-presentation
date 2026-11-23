@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0] — 2026-11-23
+
+### Added
+
+- Local stdio MCP server using the official TypeScript SDK v2, with 18 typed tools for presentation editing.
+- Project repository with isolated storage root, atomic file replacements, 5 MiB document limit and revision checks.
+- MCP tools for project/slide CRUD, text/shapes/images/HTML, bulk style and animation updates, grouping, layers and export.
+- PNG slide preview tool driven by a real headless Chrome renderer; remote requests blocked while rendering.
+- Portable MCP launcher for Codex with absolute paths, independent of the host's working directory.
+- End-to-end MCP client smoke test, with revision conflicts, invalid writes, PNG validation and standalone HTML export.
+- MCP usage docs with Windows Codex setup and agent workflow examples.
+
+### Changed
+
+- Standalone HTML builder shared between the CLI exporter and the MCP exporter.
+- Upgraded Vitest to a patched version; `npm audit` reports no vulnerabilities.
+
+### Limitations
+
+- The MCP server and the web editor share the same document format, but there is no automatic live sync yet.
+- MCP tools do not expose an HTTP server; stdio is intentionally scoped to local agent clients.
+
 ## [0.2.0] — 2026-11-23
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "core-presentation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,13 +10,22 @@
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "node scripts/smoke-editor.mjs",
     "typecheck": "tsc --noEmit",
-    "export:html": "node scripts/export-html.mjs"
+    "export:html": "node scripts/export-html.mjs",
+    "mcp": "node scripts/launch-mcp.mjs",
+    "test:mcp": "node scripts/smoke-mcp.mjs"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@types/node": "^22.20.5",
     "esbuild": "^0.25.5",
     "playwright-core": "^1.65.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.12"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.7"
   }
 }

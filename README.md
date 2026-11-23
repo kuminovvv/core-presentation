@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.2 alpha. Engine, visual studio, grouping, alignment guides, animation timeline and standalone HTML export are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.3 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -20,6 +20,16 @@ npm run dev
 Open the local URL printed by Vite (normally **http://127.0.0.1:5173/**). The studio starts with a three-slide demo.
 
 The visual editor supports adding and removing slides; adding text, shapes, image URLs and HTML/JS blocks; dragging, resizing and rotating elements; multi-selection, grouping, alignment, snapping guides, z-index controls; editing properties; undo/redo; importing/exporting JSON; and previewing presentations with transitions and animations.
+
+### Create presentations with an AI agent
+
+Core Presentation now includes a **local stdio MCP server** supporting **18 typed tools** for creating and reading projects, editing slides, changing text/CSS/animations, grouping objects, screenshotting slides, and exporting standalone HTML. It works with Codex and any MCP client implementing stdio.
+
+```powershell
+npm run mcp
+```
+
+To connect Codex on Windows, see the complete setup and tool catalog in **[docs/MCP.md](docs/MCP.md)**. The server never needs a token or an HTTP port. It saves projects under an isolated `presentations/` directory. AI changes are written to disk; the current web editor can open the resulting `presentation.json` using **Импорт JSON**. Live disk synchronization in the browser is not yet implemented.
 
 ### Visual editing & shortcuts
 
@@ -66,6 +76,13 @@ src/
     store.ts        Undo/redo, event subscription
   editor/
     geometry.ts     Pure resize, rotate, snap and marquee functions
+  mcp/
+    project-repository.ts   File storage, revision checking, atomic saves
+    server.ts       Typed MCP tools for AI agents
+    stdio.ts        Local MCP stdio server
+    preview.ts      Headless Chrome PNG screenshots
+  export/
+    standalone.mjs  Shared standalone HTML builder
   renderer/
     dom.ts          HTML element rendering, sandboxed widgets
     player.ts       Presentation navigation, transitions, animations
@@ -80,12 +97,15 @@ web/
   style.css
 scripts/
   export-html.mjs   Single-file HTML export
+  launch-mcp.mjs    Portable Codex/stdio launcher
   smoke-editor.mjs  Real Chrome editor gesture test
+  smoke-mcp.mjs     MCP client end-to-end tool test
 examples/
   basic.json        Open-format presentation with interactive JS
 tests/
   core.test.ts      Schema, editing, undo/redo coverage
   geometry.test.ts  Geometry, grouping, layer and snapping tests
+  mcp-project-repository.test.ts  File safety, concurrency and revisions
 ```
 
 ### JSON schema
@@ -143,7 +163,7 @@ console.log(serializePresentation(deck));
 
 The same API also exposes `updateElements` for atomic multi-element operations, `groupElements`, `ungroupElements`, `reorderElements`, `duplicateElements`, and pure geometry helpers such as `resizeElements`, `rotateElements`, and `snapMove`. All are usable from TypeScript without the web editor. Group membership persists as an optional `groupId` string on each element.
 
-The `PresentationStore` class provides history and subscriptions. A dedicated MCP server can be built on this API later without redesigning the document model.
+The `PresentationStore` class provides history and subscriptions. The MCP server implements typed operations on the same document model and can supply visual PNG screenshots of its slides.
 
 ### Custom HTML / CSS / JS components
 
@@ -162,16 +182,17 @@ npm run typecheck
 npm test
 npm run build
 npm run test:e2e
+npm run test:mcp
 ```
 
-The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, production build and standalone export on each push to `main` and pull request.
+The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, MCP tool integration tests, production build and standalone export on each push to `main` and pull request.
 
 ## Planned work
 
 - Rich editor interactions: aspect-ratio locking, precision rotated-group bounds, editable selection handles for skew, distributions and rulers.
 - Rich text, typography, asset library, charts and reusable components.
 - Advanced keyframe animation timeline, triggers and additional transitions.
-- Dedicated command protocol/MCP integration for AI agents.
+- Live project sync between the agent's file-backed projects and the visual web editor.
 - Offline file/project manager and improved export/asset packaging.
 - Native Rust application **after** the engine and web editor have matured.
 

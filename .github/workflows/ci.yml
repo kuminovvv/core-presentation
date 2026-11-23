@@ -17,6 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:mcp
       - run: npm run build
       - name: Visual editor browser smoke tests
         run: npm run test:e2e
