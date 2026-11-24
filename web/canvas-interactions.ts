@@ -141,7 +141,7 @@ export class CanvasInteractions {
     gesture.all = project.slides.find(s => s.id === this.hooks.slideId())?.elements ?? [];
     gesture.viewport = project.viewport;
     this.gesture = gesture;
-    this.stage.setPointerCapture(event.pointerId);
+    // Capture only after an actual drag, otherwise native double-click is lost.
     window.addEventListener("pointermove", this.onMove);
     window.addEventListener("pointerup", this.onUp);
     window.addEventListener("pointercancel", this.onCancel);
@@ -152,7 +152,10 @@ export class CanvasInteractions {
     if (!gesture || event.pointerId !== gesture.pointerId) return;
     const at = this.point(event);
     const dx = at.x - gesture.startX, dy = at.y - gesture.startY;
-    if (Math.hypot(dx, dy) > 1) gesture.didMove = true;
+    if (!gesture.didMove && Math.hypot(dx, dy) > 1) {
+      gesture.didMove = true;
+      this.stage.setPointerCapture(event.pointerId);
+    }
 
     if (gesture.mode === "marquee") {
       this.marquee = {
