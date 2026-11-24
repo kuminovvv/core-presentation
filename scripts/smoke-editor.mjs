@@ -158,11 +158,22 @@ try {
     "Browser exports a complete standalone HTML presentation");
   check(html.includes("data:image/png;base64,"),
     "Offline export contains the uploaded embedded image");
-  const [pdfDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.locator("#export-pdf").click(),
+  const pdfAlerts = [];
+  page.on("dialog", async dialog => {
+    pdfAlerts.push(dialog.message());
+    console.log("PDF_ALERT:", dialog.message());
+    await dialog.dismiss();
+  });
+  page.on("response", response => {
+    if (response.url().includes("/api/export/pdf")) console.log("PDF_HTTP:", response.status());
+  });
+  console.log("PDF_BUTTON_RECT:", JSON.stringify(await page.locator("#export-pdf").boundingBox()));
+    const [pdfDownload] = await Promise.all([
+    page.waitForEvent("download", { timeout: 12000 }),
+    page.locator("#export-pdf").click({ timeout: 12000 }),
   ]);
   const pdf = await readFile(await pdfDownload.path());
+  check(pdfAlerts.length === 0, "No PDF browser error alerts");
   check(pdf.subarray(0, 5).toString("utf8") === "%PDF-",
     "PDF export button downloads a real PDF file");
   check(await page.locator("#preview-fullscreen").count() === 1,
