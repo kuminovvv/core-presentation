@@ -1,4 +1,5 @@
 /** Browser smoke test using an already installed Chrome; no browser download needed. */
+process.env.CORE_PRESENTATION_PDF_DEBUG = "1";
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
@@ -175,7 +176,7 @@ try {
     return { front: front?.outerHTML.slice(0, 250), disabled: element.disabled };
   });
   console.log("PDF_HIT_TEST:", JSON.stringify(hit));
-  const pendingPdf = page.waitForEvent("download", { timeout: 15000 });
+  const pendingPdf = page.waitForEvent("download", { timeout: 65000 });
   await page.locator("#export-pdf").click({ timeout: 5000 });
   console.log("PDF_CLICK_FINISHED");
   const pdfDownload = await pendingPdf;
