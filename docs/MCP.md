@@ -17,28 +17,23 @@ This is expected to appear idle: an MCP server waits for a client on stdin. The 
 
 ## Connect Codex (Windows)
 
+**Note:** Core Presentation uses the MCP TypeScript SDK v2 over local `stdio` transport. The new stateless MCP 2026-07-28 remote Streamable HTTP transport and OAuth are not implemented in this local server. They are not required to connect Codex on the same PC.
+
 In PowerShell, after installing dependencies:
 
 ```powershell
-codex mcp add core-presentation -- node "D:\Project\core-presentation\scripts\launch-mcp.mjs" --projects-dir "D:\Project\core-presentation\presentations"
+# Run these commands from the Core Presentation repository folder.
+$repo = (Resolve-Path .).Path
+codex mcp add core-presentation -- node "$repo\scripts\launch-mcp.mjs" --projects-dir "$repo\presentations"
 codex mcp list
 ```
 
-If the repository lives elsewhere, replace both paths. The launcher resolves its own dependencies and does not depend on the current working directory. On other operating systems, use their equivalent absolute paths.
+The commands detect the repository path automatically, whether it is on C:, D:, or another drive. The launcher resolves its own dependencies and does not depend on the current working directory. On other operating systems, use their equivalent absolute paths.
 
 Codex can now call tools named `presentation_*`. Restart the current Codex session if it was already open.
 
-Equivalent manual TOML configuration:
-
-```toml
-[mcp_servers.core-presentation]
-command = "node"
-args = [
-  "D:\\Project\\core-presentation\\scripts\\launch-mcp.mjs",
-  "--projects-dir",
-  "D:\\Project\\core-presentation\\presentations"
-]
-```
+If you configure Codex manually, use absolute paths to the same script and projects
+directory. No specific drive letter is required.
 
 For another MCP client, register an stdio command `node`, with those same arguments and a working Node.js installation. No HTTP URL, API token or MCP authentication is required: the host controls access by starting a local process.
 
