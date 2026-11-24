@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.5 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.6 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -55,6 +55,22 @@ Select **Анимации** in the canvas toolbar to open a basic timeline: insp
 
 Limitations in v0.2: rotation and resizing are supported, but rotated multi-selection uses logical unrotated group bounds for alignment and resizing; no aspect-ratio lock, multi-user collaboration, image asset embedding, keyframe timeline or native Rust UI yet.
 
+### Run the complete built web studio locally
+
+After building, you can run a real Node.js HTTP server that serves the production UI **and** the shared MCP project API. Vite development middleware is not required at runtime:
+
+```bash
+npm ci
+npm run build
+npm start
+```
+
+Open **http://127.0.0.1:4173/**. The server binds to localhost for safety, uses the same `presentations/` files as Codex/MCP and supports autosave and standalone HTML export. Use `PORT=...` to change its port. The backend is intentionally not exposed to the public internet; do not reverse-proxy this local editing API without adding authentication and TLS.
+
+```bash
+npm run test:built
+```
+
 ### Work directly with HTML and images
 
 Double-click a text object to edit its content on the slide (Ctrl+Enter to finish, Escape to cancel). Select an image object to upload PNG/JPEG/WebP/GIF files from your computer; uploaded images are embedded as data URLs and remain usable in offline presentations.
@@ -73,6 +89,7 @@ Start the editor with `npm run dev`, open `http://127.0.0.1:5173`, and create/se
 
 ```bash
 npm run test:live
+npm run test:built
 ```
 
 ## Export a presentation to a single HTML file
@@ -97,7 +114,8 @@ src/
   editor/
     geometry.ts     Pure resize, rotate, snap and marquee functions
   server/
-    project-api.ts  Localhost-only project API for the web editor
+    project-api.ts  Reusable local project API for dev and built server
+    production.ts   Node HTTP server for the compiled web app
   mcp/
     project-repository.ts   File storage, revision checking, atomic saves
     server.ts       Typed MCP tools for AI agents
@@ -121,6 +139,8 @@ web/
 scripts/
   export-html.mjs   Single-file HTML export
   launch-mcp.mjs    Portable Codex/stdio launcher
+  run-studio.mjs   Local Node server for compiled editor
+  smoke-built.mjs  Production-bundle integration test
   smoke-editor.mjs  Real Chrome editor gesture test
   smoke-mcp.mjs     MCP client end-to-end tool test
   smoke-live.mjs    Browser + MCP cross-process synchronization test

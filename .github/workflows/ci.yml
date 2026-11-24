@@ -21,6 +21,8 @@ jobs:
       - name: MCP and browser live synchronization
         run: npm run test:live
       - run: npm run build
+      - name: Test built web studio and shared API
+        run: npm run test:built
       - name: Visual editor browser smoke tests
         run: npm run test:e2e
       - run: npm run export:html -- examples/basic.json /tmp/basic-presentation.html

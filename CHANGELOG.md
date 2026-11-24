@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0] — 2026-11-24
+
+### Added
+
+- Local Node.js server to run the compiled web studio independently of Vite development mode.
+- Shared API handler for development, Vite preview and built static UI.
+- Built-server Chrome integration test, verifying persistent project creation, editing, export and same-origin protection.
+
+### Notes
+
+- The server is localhost-only by design. Remote access requires a separately secured deployment configuration.
+- The bundled Node runtime still expects dependencies installed via `npm ci` and a prior `npm run build`.
+
+
 ## [0.5.0] — 2026-11-24
 
 ### Added

@@ -1,12 +1,14 @@
 {
   "name": "core-presentation",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "start": "node scripts/run-studio.mjs",
+    "test:built": "node --import tsx scripts/smoke-built.mjs",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "node scripts/smoke-editor.mjs",
     "typecheck": "tsc --noEmit",
