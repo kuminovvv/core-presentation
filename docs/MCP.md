@@ -17,7 +17,7 @@ This is expected to appear idle: an MCP server waits for a client on stdin. The 
 
 ## Connect Codex (Windows)
 
-**Note:** Core Presentation uses the MCP TypeScript SDK v2 over local `stdio` transport. The new stateless MCP 2026-07-28 remote Streamable HTTP transport and OAuth are not implemented in this local server. They are not required to connect Codex on the same PC.
+**Note:** Core Presentation uses MCP TypeScript SDK v2 over local `stdio`. An optional **stateless MCP 2026-07-28 Streamable HTTP server** is implemented separately; see [MCP_HTTP.md](MCP_HTTP.md). OAuth is not implemented. The HTTP endpoint is not required to connect Codex on the same PC.
 
 In PowerShell, after installing dependencies:
 

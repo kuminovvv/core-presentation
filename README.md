@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v1.0 — stable, local-first web studio and MCP engine. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v1.1 — stable, local-first web studio and MCP engine with optional authenticated Streamable HTTP. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Start editing on Windows
 
@@ -33,7 +33,7 @@ Core Presentation now includes a **local stdio MCP server** supporting **21 type
 npm run mcp
 ```
 
-To connect Codex on Windows, see the complete setup and tool catalog in **[docs/MCP.md](docs/MCP.md)**. The server never needs a token or an HTTP port. It saves projects under an isolated `presentations/` directory. AI and browser edits now share the same file-backed projects. Choose a project in the top toolbar or create a new one. Browser changes auto-save and the editor fetches agent changes roughly every 1.4 seconds, without manual JSON import. Revision conflicts cannot silently overwrite newer edits: select **Версия агента** to discard the local copy, or **Сохранить копию** to preserve it as a separate project.
+To connect Codex on Windows over local stdio, see **[docs/MCP.md](docs/MCP.md)**. The stdio server does not need a token or an HTTP port. A separate optional MCP 2026-07-28 server is available over authenticated Streamable HTTP; see **[docs/MCP_HTTP.md](docs/MCP_HTTP.md)**. It saves projects under an isolated `presentations/` directory. AI and browser edits now share the same file-backed projects. Choose a project in the top toolbar or create a new one. Browser changes auto-save and the editor fetches agent changes roughly every 1.4 seconds, without manual JSON import. Revision conflicts cannot silently overwrite newer edits: select **Версия агента** to discard the local copy, or **Сохранить копию** to preserve it as a separate project.
 
 ### Visual editing & shortcuts
 
@@ -141,6 +141,7 @@ src/
     project-repository.ts   File storage, revision checking, atomic saves
     server.ts       Typed MCP tools for AI agents
     stdio.ts        Local MCP stdio server
+    http.ts         Authenticated stateless MCP 2026-07-28 HTTP server
     preview.ts      Headless Chrome PNG screenshots
   export/
     standalone.mjs  Shared standalone HTML builder
@@ -162,6 +163,8 @@ web/
 scripts/
   export-html.mjs   Single-file HTML export
   launch-mcp.mjs    Portable Codex/stdio launcher
+  launch-mcp-http.mjs  Authenticated loopback Streamable HTTP launcher
+  smoke-mcp-http.mjs  Official HTTP client + authorization test
   run-studio.mjs   Local Node server for compiled editor
   smoke-built.mjs  Production-bundle integration test
   smoke-editor.mjs  Real Chrome editor gesture test
@@ -250,6 +253,7 @@ npm test
 npm run build
 npm run test:e2e
 npm run test:mcp
+npm run test:mcp:http
 npm run test:live
 ```
 

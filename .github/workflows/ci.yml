@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:mcp
+      - name: MCP 2026-07-28 HTTP integration and security tests
+        run: npm run test:mcp:http
       - name: MCP and browser live synchronization
         run: npm run test:live
       - run: npm run build
@@ -45,3 +47,5 @@ jobs:
         run: npm run test:built
       - name: Windows MCP client test
         run: npm run test:mcp
+      - name: Windows MCP HTTP v2 client test
+        run: npm run test:mcp:http
