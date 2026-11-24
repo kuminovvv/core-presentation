@@ -158,6 +158,16 @@ try {
     "Browser exports a complete standalone HTML presentation");
   check(html.includes("data:image/png;base64,"),
     "Offline export contains the uploaded embedded image");
+  const [pdfDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-pdf").click(),
+  ]);
+  const pdf = await readFile(await pdfDownload.path());
+  check(pdf.subarray(0, 5).toString("utf8") === "%PDF-",
+    "PDF export button downloads a real PDF file");
+  check(await page.locator("#preview-fullscreen").count() === 1,
+    "Presentation controls offer full-screen mode");
+
 
   // Native layout templates are fully editable objects.
   await page.locator(".layout-menu summary").click();

@@ -221,3 +221,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .layout-options button:hover { background:#394f77; }
 .slide-row.dragging { opacity:.45; }
 .slide-row.drop-target { outline:2px dashed #b0bafc; outline-offset:-1px; }
+
+/* Production presentation controls */
+.preview-overlay:fullscreen { width:100vw; height:100vh; background:#050713; }
+.preview-overlay:fullscreen .preview-surface { width:100%; height:calc(100% - 60px); }
+#preview-fullscreen { font-size:12px; }

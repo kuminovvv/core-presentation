@@ -4,6 +4,7 @@ import type { Presentation } from "../core/types";
 import { validatePresentation } from "../core/validation";
 import { ProjectRepository } from "../mcp/project-repository";
 import { buildStandaloneHtml } from "../export/standalone.mjs";
+import { buildPdf } from "../export/pdf.mjs";
 
 const MAX_REQUEST_BYTES = 6 * 1024 * 1024;
 const VALID_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
@@ -65,6 +66,21 @@ async function processApi(
 ): Promise<void> {
   assertLocal(req);
   const method = req.method ?? "GET";
+  if (pathname === "/api/export/pdf") {
+    if (method !== "POST") throw new ApiError(405, "Unsupported method");
+    const input = await bodyOf(req);
+    validatePresentation(input.project);
+    const pdf = await buildPdf(input.project as Presentation);
+    res.writeHead(200, {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'attachment; filename="presentation.pdf"',
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Length": String(pdf.length),
+    });
+    res.end(pdf);
+    return;
+  }
   if (pathname === "/api/export") {
     if (method !== "POST") throw new ApiError(405, "Unsupported method");
     const input = await bodyOf(req);
@@ -121,7 +137,7 @@ export function createLocalApiHandler(repository = new ProjectRepository()) {
     try {
       pathname = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
     } catch { return json(res, 400, { error: "Invalid URL" }); }
-    if (pathname !== "/api/export" && pathname !== "/api/projects" &&
+    if (pathname !== "/api/export" && pathname !== "/api/export/pdf" && pathname !== "/api/projects" &&
         !pathname.startsWith("/api/projects/")) {
       next();
       return;

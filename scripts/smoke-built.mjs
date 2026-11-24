@@ -65,6 +65,13 @@ try {
   const result = await exported.text();
   assert(exported.status === 200 && result.includes("presentation-data") &&
     result.includes("A production build"), "Built server exports a standalone HTML file");
+  const pdfResponse = await fetch(url + "/api/export/pdf", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project: deck }),
+  });
+  const pdf = Buffer.from(await pdfResponse.arrayBuffer());
+  assert(pdfResponse.status === 200 && pdf.subarray(0, 5).toString() === "%PDF-",
+    "Built server exports presentation PDF");
 
   browser = await chromium.launch({
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" }),

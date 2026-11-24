@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.7 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.8 beta. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -71,6 +71,12 @@ Open **http://127.0.0.1:4173/**. The server binds to localhost for safety, uses 
 npm run test:built
 ```
 
+### Full-screen presenting and PDF export
+
+Use **Предпросмотр** to present the slide deck and **⛶ Полный экран** to enter full-screen slideshow mode. Arrow keys, Space, Home and End navigate slides; Escape exits presentation mode. The presentation can also be downloaded as a self-contained HTML file.
+
+Use **PDF** to export every slide as its own page. PDF is generated with headless Chrome and preserves selectable text. Google Chrome must be installed locally; if it is not available in the default location, configure `CHROME_PATH` in the environment. Embedded images are printed. Remote resources are deliberately blocked during PDF export for privacy; use embedded image files for fully self-contained results.
+
 ### Native editable slide layouts
 
 The left sidebar offers a gallery of starter layouts: **Title**, **Section**, **Two columns**, **Quote**, and **Blank**. Each layout consists of ordinary editable text/shape objects and can be customized by hand or by an agent. Drag slide thumbnails to reorder slides; their IDs and element data remain intact.
@@ -128,6 +134,8 @@ src/
     preview.ts      Headless Chrome PNG screenshots
   export/
     standalone.mjs  Shared standalone HTML builder
+    pdf.mjs         PDF export through isolated Chrome
+  print.ts          Browser print layout for a PDF page per slide
   renderer/
     dom.ts          HTML element rendering, sandboxed widgets
     player.ts       Presentation navigation, transitions, animations

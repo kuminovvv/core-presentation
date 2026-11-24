@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0] — 2026-11-24
+
+### Added
+
+- PDF export from the web editor with one page per slide and selectable text.
+- Dedicated print renderer shared by local Node server and Vite development server.
+- Fullscreen presentation mode available from the preview overlay.
+- PDF format and UI smoke tests (including built Node server).
+
+### Safety
+
+- PDF generation denies remote network and file requests in its isolated Chrome context.
+- The PDF renderer limits viewport dimensions and page count to prevent runaway work.
+
+
 ## [0.7.0] — 2026-11-24
 
 ### Added

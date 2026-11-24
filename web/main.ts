@@ -486,6 +486,7 @@ function openPreview(): void {
   player.focus();
 }
 function closePreview(): void {
+  if (document.fullscreenElement === overlay) void document.exitFullscreen();
   player?.destroy();
   player = null;
   overlay.hidden = true;
@@ -536,6 +537,31 @@ $<HTMLInputElement>("import-file").addEventListener("change", async event => {
   input.value = "";
 });
 $("preview").addEventListener("click", openPreview);
+$("export-pdf").addEventListener("click", async () => {
+  const button = $<HTMLButtonElement>("export-pdf");
+  button.disabled = true;
+  const old = button.textContent;
+  button.textContent = "PDF...";
+  try {
+    const response = await fetch("/api/export/pdf", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: store.value }),
+    });
+    if (!response.ok) {
+      const problem = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(problem.error ?? "Не удалось подготовить PDF. Установите Google Chrome.");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = (store.value.title.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60) || "presentation") + ".pdf";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    alert(error instanceof Error ? error.message : String(error));
+  } finally { button.disabled = false; button.textContent = old; }
+});
 $("export-html").addEventListener("click", async () => {
   const button = $<HTMLButtonElement>("export-html");
   button.disabled = true;
@@ -603,6 +629,19 @@ stage.addEventListener("dblclick", event => {
 });
 $("preview-close").addEventListener("click", closePreview);
 $("preview-next").addEventListener("click", () => { void player?.next(); });
+$("preview-fullscreen").addEventListener("click", () => {
+  if (document.fullscreenElement === overlay) {
+    void document.exitFullscreen();
+  } else {
+    void overlay.requestFullscreen().catch(error =>
+      alert("Полноэкранный режим недоступен: " + error.message));
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  $("preview-fullscreen").textContent = document.fullscreenElement === overlay
+    ? "⛶ Выйти из полного экрана" : "⛶ Полный экран";
+});
+
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
   if (event.key === "Escape" && player) { closePreview(); return; }
