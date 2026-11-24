@@ -23,6 +23,10 @@ try {
   assert(home.status === 200 && html.includes("Core Presentation"), "Built editor serves its HTML");
   const denied = await fetch(url + "/api/projects", { headers: { Origin: "https://evil.test" } });
   assert(denied.status === 403, "Cross-origin project API access is forbidden");
+  const rebinding = await fetch(url + "/api/projects", {
+    headers: { Host: "untrusted.example" },
+  });
+  assert(rebinding.status === 403, "DNS-rebinding Host header is rejected");
 
   const created = await fetch(url + "/api/projects", {
     method: "POST", headers: { "Content-Type": "application/json" },
