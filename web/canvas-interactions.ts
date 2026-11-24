@@ -82,7 +82,7 @@ export class CanvasInteractions {
   }
 
   private onDown = (event: PointerEvent): void => {
-    if (event.button !== 0 || this.gesture) return;
+    if (event.button !== 0 || this.gesture || (event.target as HTMLElement).closest("[contenteditable=true]")) return;
     const target = event.target as HTMLElement;
     const resize = target.closest<HTMLElement>("[data-handle]")?.dataset.handle as Handle | undefined;
     const rotating = Boolean(target.closest("[data-rotate]"));

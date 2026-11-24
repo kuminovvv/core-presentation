@@ -129,6 +129,36 @@ try {
     await page.screenshot({ path: process.env.SMOKE_SCREENSHOT });
   }
 
+  // Editing text directly on the slide should update the saved document model.
+  await page.locator("#add-text").click();
+  const editable = page.locator(".cp-element.cp-text").filter({ hasText: "Your text" });
+  await editable.dblclick();
+  await page.locator(".cp-element[contenteditable='true']").fill("Edited inline");
+  await page.locator("#add-image").click();
+  await page.locator(".cp-element.cp-text").filter({ hasText: "Edited inline" }).waitFor();
+  check(true, "Double-click text editing updates the slide document");
+
+  // Embedded raster images must remain available in standalone offline HTML.
+  const pixel = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aZkAAAAASUVORK5CYII=",
+    "base64"
+  );
+  await page.locator("#image-upload").setInputFiles({
+    name: "pixel.png", mimeType: "image/png", buffer: pixel,
+  });
+  await page.locator(".cp-element img[src^='data:image/png;base64,']").waitFor();
+  check(true, "Image upload embeds data URL into the slide");
+
+  const [htmlDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-html").click(),
+  ]);
+  const html = await readFile(await htmlDownload.path(), "utf8");
+  check(html.includes("presentation-data") && html.includes("Edited inline"),
+    "Browser exports a complete standalone HTML presentation");
+  check(html.includes("data:image/png;base64,"),
+    "Offline export contains the uploaded embedded image");
+
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

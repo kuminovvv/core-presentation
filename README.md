@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.4 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.5 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -55,6 +55,12 @@ Select **Анимации** in the canvas toolbar to open a basic timeline: insp
 
 Limitations in v0.2: rotation and resizing are supported, but rotated multi-selection uses logical unrotated group bounds for alignment and resizing; no aspect-ratio lock, multi-user collaboration, image asset embedding, keyframe timeline or native Rust UI yet.
 
+### Work directly with HTML and images
+
+Double-click a text object to edit its content on the slide (Ctrl+Enter to finish, Escape to cancel). Select an image object to upload PNG/JPEG/WebP/GIF files from your computer; uploaded images are embedded as data URLs and remain usable in offline presentations.
+
+Click **Экспорт HTML** in the web editor to download a standalone HTML presentation directly, without using a terminal. The built-in export endpoint is provided by the local Vite development server (`npm run dev`); the standalone exported presentation works independently of the server.
+
 ### Live editing between the agent and browser
 
 Start the editor with `npm run dev`, open `http://127.0.0.1:5173`, and create/select a shared project using the top toolbar. Have Codex use MCP `presentation_get`, `presentation_add_slide`, and `presentation_update_elements` on that same project. Changes are automatically reflected on the canvas. In the other direction, browser edits are persisted to `presentations/<name>/presentation.json` after a short debounce.
@@ -77,7 +83,7 @@ npm run export:html -- examples/basic.json presentation.html
 
 Open `presentation.html` directly in a browser. Use arrows or the buttons to navigate. HTML/CSS/JS code and the player are bundled inside the exported file, so it works **without an editor or an internet connection**. Images referenced by remote URLs are *not* embedded; use data URLs for a completely offline presentation with images.
 
-To export a project created visually, first click **Сохранить JSON** in the editor, then pass the downloaded JSON file to the command above.
+For quick export, click **Экспорт HTML** in the running web editor. The command-line exporter remains available for agents and automation.
 
 ## Architecture
 

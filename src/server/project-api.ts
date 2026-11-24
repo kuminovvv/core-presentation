@@ -3,6 +3,7 @@ import type { Plugin } from "vite";
 import type { Presentation } from "../core/types";
 import { validatePresentation } from "../core/validation";
 import { ProjectRepository } from "../mcp/project-repository";
+import { buildStandaloneHtml } from "../export/standalone.mjs";
 
 const MAX_REQUEST_BYTES = 6 * 1024 * 1024;
 const VALID_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
@@ -61,6 +62,28 @@ export function projectApiPlugin(repository = new ProjectRepository()): Plugin {
     name: "core-presentation:local-project-api",
     apply: "serve",
     configureServer(server) {
+      server.middlewares.use("/api/export", (req, res) => {
+        void (async () => {
+          assertLocal(req);
+          if (req.method !== "POST") throw new ApiError(405, "Unsupported method");
+          const input = await bodyOf(req);
+          validatePresentation(input.project);
+          const html = await buildStandaloneHtml(input.project as Presentation);
+          res.writeHead(200, {
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="presentation.html"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+          });
+          res.end(html);
+        })().catch((error: unknown) => {
+          if (res.headersSent) return;
+          const err = error as Error;
+          json(res, error instanceof ApiError ? error.status :
+            err.name === "PresentationValidationError" ? 422 : 500,
+            { error: err.message ?? "Export failed" });
+        });
+      });
       server.middlewares.use("/api/projects", (req, res) => {
         void (async () => {
           assertLocal(req);

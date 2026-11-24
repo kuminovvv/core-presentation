@@ -252,6 +252,9 @@ function renderProperties(): void {
         ${field("Заливка (CSS)","fill",element.fill)}
         ${field("Скругление","borderRadius",element.borderRadius ?? 0,"number")}` : ""}
       ${element.type === "image" ? `
+        <label class="image-upload">Загрузить файл (PNG, JPG, WebP, GIF)
+          <input id="image-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+        </label>
         ${field("URL изображения","src",element.src)}
         ${field("Подпись","alt",element.alt)}
         ${pick("Вписывание","fit",element.fit ?? "cover",["cover","contain","fill"])}` : ""}
@@ -275,6 +278,34 @@ function renderProperties(): void {
   }
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
     .forEach(input => input.addEventListener("change", () => applyProperty(input)));
+  const fileInput = props.querySelector<HTMLInputElement>("#image-upload");
+  if (fileInput && element?.type === "image") fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+      alert("Поддерживаются PNG, JPEG, WebP и GIF.");
+      return;
+    }
+    if (file.size > 2_500_000) {
+      alert("Изображение слишком большое. Максимум 2,5 МБ.");
+      return;
+    }
+    try {
+      const src = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Не удалось прочитать изображение"));
+        reader.readAsDataURL(file);
+      });
+      const current = store.value;
+      const next = updateElement(current, element.id, { src, alt: file.name });
+      if (new Blob([serializePresentation(next)]).size > 4_750_000)
+        throw new Error("Размер презентации превысит лимит проекта (4,75 МБ)");
+      store.update(() => next);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : String(error));
+    }
+  });
 }
 
 function renderTimeline(): void {
@@ -471,6 +502,71 @@ $<HTMLInputElement>("import-file").addEventListener("change", async event => {
   input.value = "";
 });
 $("preview").addEventListener("click", openPreview);
+$("export-html").addEventListener("click", async () => {
+  const button = $<HTMLButtonElement>("export-html");
+  button.disabled = true;
+  const previous = button.textContent;
+  button.textContent = "Экспорт...";
+  try {
+    const response = await fetch("/api/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: store.value }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(error.error ?? "Экспорт недоступен. Запустите веб-редактор через npm run dev.");
+    }
+    const html = await response.blob();
+    const url = URL.createObjectURL(html);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = (store.value.title.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60) || "presentation") + ".html";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    alert(error instanceof Error ? error.message : String(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = previous;
+  }
+});
+
+stage.addEventListener("dblclick", event => {
+  const node = (event.target as HTMLElement).closest<HTMLElement>(".cp-element.cp-text");
+  if (!node?.dataset.elementId || node.isContentEditable) return;
+  const id = node.dataset.elementId;
+  const source = store.value.slides.flatMap(slide => slide.elements)
+    .find(item => item.id === id);
+  if (!source || source.type !== "text") return;
+  const original = source.text;
+  node.contentEditable = "true";
+  node.spellcheck = true;
+  node.style.cursor = "text";
+  node.focus();
+  let closed = false;
+  const finish = (save: boolean) => {
+    if (closed) return;
+    closed = true;
+    const value = node.innerText;
+    node.removeAttribute("contenteditable");
+    node.style.cursor = "";
+    if (!save) { node.textContent = original; return; }
+    if (value !== original) {
+      try { store.update(project => updateElement(project, id, { text: value })); }
+      catch (error) { alert(error instanceof Error ? error.message : String(error)); }
+    }
+  };
+  node.addEventListener("blur", () => finish(true), { once: true });
+  node.addEventListener("keydown", key => {
+    if (key.key === "Escape") { key.stopPropagation(); finish(false); node.blur(); }
+    if (key.key === "Enter" && (key.ctrlKey || key.metaKey)) {
+      key.preventDefault();
+      finish(true);
+      node.blur();
+    }
+  });
+});
 $("preview-close").addEventListener("click", closePreview);
 $("preview-next").addEventListener("click", () => { void player?.next(); });
 $("preview-back").addEventListener("click", () => { void player?.previous(); });

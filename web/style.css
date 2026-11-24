@@ -202,3 +202,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   #sync-status { max-width:92px; }
   .project-switcher select { width:135px; min-width:100px; }
 }
+
+.image-upload { display:block; border:1px dashed #61779c; background:#202e48; color:#cedafe;
+  border-radius:9px; padding:12px 10px; font-size:11px; text-align:center; cursor:pointer; }
+.image-upload:hover { background:#2c3e60; }
+.image-upload input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.editor-stage .cp-element[contenteditable="true"] { cursor:text !important; outline:3px solid #9ed3ff; user-select:text; }

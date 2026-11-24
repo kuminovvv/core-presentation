@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0] — 2026-11-24
+
+### Added
+
+- Direct standalone HTML export button in the browser editor.
+- Image upload with embedded offline-friendly PNG/JPEG/WebP/GIF data URLs and size validation.
+- Inline text editing by double-click on the slide (Ctrl+Enter to save, Escape to cancel).
+- Browser regression coverage for offline image embedding, HTML download and inline editing.
+
+### Limitations
+
+- Browser HTML export uses the local Vite development server; static deployment without this API must provide a compatible export backend.
+- Embedded raster images count against the 5 MiB project document limit.
+
+
 ## [0.4.0] — 2026-11-24
 
 ### Added
