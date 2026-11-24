@@ -45,7 +45,7 @@ function assertLocal(req: IncomingMessage): void {
   if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(ip))
     throw new ApiError(403, "Localhost access only");
   // The Host header must also be loopback: DNS rebinding must not expose this API.
-  const host = (req.headers.host ?? "").replace(/:\\d+$/, "").toLowerCase();
+  const host = (req.headers.host ?? "").replace(/:[0-9]+$/, "").toLowerCase();
   if (!["127.0.0.1", "localhost", "[::1]"].includes(host))
     throw new ApiError(403, "Only localhost Host headers are permitted");
   const origin = req.headers.origin;
