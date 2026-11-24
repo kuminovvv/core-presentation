@@ -19,7 +19,7 @@ try {
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   const errors = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", error => { errors.push(error.message); console.error("BROWSER_PAGEERROR:", error.message); });
   await page.goto(url);
   await page.locator(".cp-slide[data-slide-id='cover']").waitFor();
 
@@ -168,10 +168,17 @@ try {
     if (response.url().includes("/api/export/pdf")) console.log("PDF_HTTP:", response.status());
   });
   console.log("PDF_BUTTON_RECT:", JSON.stringify(await page.locator("#export-pdf").boundingBox()));
-    const [pdfDownload] = await Promise.all([
-    page.waitForEvent("download", { timeout: 12000 }),
-    page.locator("#export-pdf").click({ timeout: 12000 }),
-  ]);
+    const hit = await page.evaluate(() => {
+    const element = document.querySelector("#export-pdf");
+    const rect = element.getBoundingClientRect();
+    const front = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return { front: front?.outerHTML.slice(0, 250), disabled: element.disabled };
+  });
+  console.log("PDF_HIT_TEST:", JSON.stringify(hit));
+  const pendingPdf = page.waitForEvent("download", { timeout: 15000 });
+  await page.locator("#export-pdf").click({ timeout: 5000 });
+  console.log("PDF_CLICK_FINISHED");
+  const pdfDownload = await pendingPdf;
   const pdf = await readFile(await pdfDownload.path());
   check(pdfAlerts.length === 0, "No PDF browser error alerts");
   check(pdf.subarray(0, 5).toString("utf8") === "%PDF-",
