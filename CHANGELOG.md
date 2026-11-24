@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] — 2026-11-24
+
+- Redesigned web studio: neutral surfaces, spacious layout, rounded panels, controls and dialogs.
+- Basecoat UI compiled Tailwind component styles bundled locally, with custom design tokens and inline SVG toolbar icons.
+- Light, dark and system themes with persistent preference and OS change tracking.
+- Browser tests verify appearance switching, persistence and unchanged slide styling.
+
+
 ## [1.1.0] — 2026-11-24
 
 ### Added

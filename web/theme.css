@@ -1,0 +1,29 @@
+/* Studio design tokens. Basecoat's Tailwind-compiled components consume these variables. */
+:root {
+  color-scheme: light;
+  --background: #ffffff; --foreground: #202124; --card: #ffffff; --card-foreground: #202124;
+  --popover: #ffffff; --popover-foreground: #202124; --primary: #1769df; --primary-foreground: #ffffff;
+  --secondary: #f0f1f3; --secondary-foreground: #303238; --muted: #f4f4f6; --muted-foreground: #676a73;
+  --accent: #e8eefb; --accent-foreground: #174da6; --destructive: #b42336; --border: #e3e4e8;
+  --input: #dfe1e5; --ring: #1769df; --radius: 0.875rem;
+  --chrome: #f5f5f7; --surface: #ffffff; --surface-raised: #ffffff; --workspace: #ebedf0;
+  --hover: #f0f1f4; --selected: #eaf1ff; --selection-text: #174da6;
+  --success: #24734c; --warning: #895706; --danger-surface: #fff0f1;
+  --canvas-shadow: 0 18px 50px #20212420, 0 0 0 1px #20212418;
+  --popup-shadow: 0 12px 36px #20212418, 0 2px 8px #20212408;
+  --control-radius: 12px; --panel-radius: 20px; --dialog-radius: 26px;
+  --motion: 150ms;
+}
+:root.dark {
+  color-scheme: dark;
+  --background: #1d1e21; --foreground: #f0f0f2; --card: #242528; --card-foreground: #f0f0f2;
+  --popover: #292a2e; --popover-foreground: #f0f0f2; --primary: #82b5ff; --primary-foreground: #10223f;
+  --secondary: #303136; --secondary-foreground: #ededf1; --muted: #2c2d31; --muted-foreground: #a8aab3;
+  --accent: #303f56; --accent-foreground: #c2dbff; --destructive: #ff9ca9; --border: #38393e;
+  --input: #424349; --ring: #82b5ff;
+  --chrome: #191a1c; --surface: #222326; --surface-raised: #2b2c30; --workspace: #17181a;
+  --hover: #303136; --selected: #26374d; --selection-text: #b5d3ff;
+  --success: #91d6aa; --warning: #f0c57d; --danger-surface: #3a292d;
+  --canvas-shadow: 0 18px 50px #0007, 0 0 0 1px #ffffff20;
+  --popup-shadow: 0 16px 45px #0006, 0 2px 8px #0003;
+}

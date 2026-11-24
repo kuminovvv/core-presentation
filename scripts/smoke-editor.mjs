@@ -29,6 +29,35 @@ try {
     console.log("PASS", message);
   };
 
+  // Theme must affect only the studio chrome, never the slide document.
+  const slideBackground = await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background);
+  await page.locator("#theme-picker").selectOption("light");
+  check(await page.locator("html").getAttribute("data-theme") === "light", "Light theme is available");
+  const light = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  await page.locator("#theme-picker").selectOption("dark");
+  check(await page.locator("html").getAttribute("data-theme") === "dark", "Dark theme is available");
+  const dark = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  check(light !== dark, "Theme changes studio surfaces");
+  check(await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background) === slideBackground,
+    "Switching themes preserves slide colors");
+  await page.reload();
+  check(await page.locator("#theme-picker").inputValue() === "dark", "Theme choice persists after reload");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.locator("#theme-picker").selectOption("system");
+  check(await page.locator("html").getAttribute("data-theme") === "light", "System mode follows light OS preference");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  check(true, "System mode reacts to OS theme changes");
+  await page.locator("#theme-picker").selectOption("light");
+  check(await page.locator(".sidebar").evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius)) >= 18,
+    "Rounded panel styling is applied");
+  if (process.env.STUDIO_THEME_SCREENSHOTS) {
+    await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-light.png" });
+    await page.locator("#theme-picker").selectOption("dark");
+    await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-dark.png" });
+    await page.locator("#theme-picker").selectOption("light");
+  }
+
   await page.locator("#add-text").click();
   const selectedBox = page.locator(".selection-box");
   await selectedBox.waitFor();
