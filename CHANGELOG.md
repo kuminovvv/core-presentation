@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.0] — 2026-11-24
+
+### Added
+
+- Local project duplication, safe archive into `.trash/`, and automatic restoration of the last opened project.
+- Browser toolbar project management and a persistent browser-local draft for the demo document.
+- MCP operations for copying/archiving projects and exporting printable PDF presentations.
+- Double-click Windows launcher with install/build/open flow.
+- Browser, repository and MCP regression tests covering the full project lifecycle.
+
+### Fixed
+
+- Prevent loss of local demo edits when refreshing the page.
+- Revision-guarded archives ensure an old tab cannot archive a newer agent revision.
+
+
 ## [0.8.0] — 2026-11-24
 
 ### Added

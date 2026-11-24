@@ -226,3 +226,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .preview-overlay:fullscreen { width:100vw; height:100vh; background:#050713; }
 .preview-overlay:fullscreen .preview-surface { width:100%; height:calc(100% - 60px); }
 #preview-fullscreen { font-size:12px; }
+
+/* Local project operations */
+.project-actions { position:relative; z-index:90; flex-shrink:0; }
+.project-actions[hidden] { display:none; }
+.project-actions summary { cursor:pointer; display:grid; place-items:center; border:1px solid #3b4862;
+  background:#26334d; border-radius:9px; height:36px; width:36px; color:#d3def7;
+  font-size:16px; letter-spacing:1px; list-style:none; }
+.project-actions summary::-webkit-details-marker { display:none; }
+.project-actions-menu { position:absolute; top:43px; right:0; display:flex; flex-direction:column;
+  width:182px; padding:6px; background:#1d2941; border:1px solid #405578;
+  border-radius:10px; box-shadow:0 12px 38px #000a; }
+.project-actions-menu button { text-align:left; padding:11px; font-size:12px; background:transparent;
+  color:#dce5fb; border:0; border-radius:7px; cursor:pointer; width:100%; height:auto; }
+.project-actions-menu button:hover { background:#344768; }
+.project-actions-menu #archive-project { color:#f4b2b2; }

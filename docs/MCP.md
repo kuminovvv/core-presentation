@@ -58,6 +58,8 @@ The agent can:
 
 The returned IDs and `revision` are stable references. You can pass `expectedRevision` on mutations to prevent silent overwriting when another agent or editor has saved a newer revision. If an expected revision fails, re-read the project before retrying.
 
+The MCP server also supports `presentation_duplicate_project`, `presentation_archive_project` (revision-protected recoverable archive), and `presentation_export_pdf` (requires Chrome).
+
 ## Tool catalog
 
 | MCP tool | Purpose |

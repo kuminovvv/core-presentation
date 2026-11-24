@@ -129,6 +129,47 @@ export class ProjectRepository {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  /** Copy a complete presentation into its own independently editable project. */
+  async duplicate(name: string, newName: string): Promise<ProjectRecord> {
+    const source = await this.read(name);
+    const target = nameOf(newName);
+    if (target === name) throw new Error("The copy must have a different project name");
+    return this.lock(target, async () => {
+      const folder = await this.projectFolder(target, true);
+      const copy = structuredClone(source.project);
+      copy.id = "presentation-" + randomUUID();
+      copy.title += " (копия)";
+      try { return await this.serializeRecord(target, copy); }
+      catch (error) {
+        await rm(folder, { recursive: true, force: true });
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * Move a project to a recoverable local trash folder rather than deleting its files.
+   * A mandatory revision check prevents archiving a version edited by another process.
+   */
+  async archive(name: string, expectedRevision: string): Promise<{ name: string; archived: string }> {
+    if (!/^[a-f0-9]{64}$/.test(expectedRevision)) throw new Error("Expected revision is required");
+    const slug = nameOf(name);
+    return this.lock(slug, async () => {
+      const record = await this.read(slug);
+      if (record.revision !== expectedRevision)
+        throw new Error(`Revision mismatch: project changed. Current revision: ${record.revision}`);
+      const root = await this.checkedRoot();
+      const trash = join(root, ".trash");
+      await mkdir(trash, { recursive: true });
+      const info = await lstat(trash);
+      if (!info.isDirectory() || info.isSymbolicLink() || await realpath(trash) !== trash)
+        throw new Error("Trash directory is not a regular directory");
+      const destination = join(trash, slug + "-" + Date.now() + "-" + randomUUID());
+      await rename(await this.projectFolder(slug), destination);
+      return { name: slug, archived: destination };
+    });
+  }
+
   /** Each mutation is validated, revision-checked and committed as one file replacement. */
   async mutate(
     name: string,
@@ -150,6 +191,30 @@ export class ProjectRepository {
   async replace(name: string, project: Presentation, expectedRevision: string): Promise<ProjectRecord> {
     if (!/^[a-f0-9]{64}$/.test(expectedRevision)) throw new Error("Expected revision is required");
     return this.mutate(name, () => project, expectedRevision);
+  }
+
+  /** Atomically save binary exports without modifying the project document revision. */
+  async exportPdf(name: string, pdf: Uint8Array): Promise<string> {
+    if (pdf.length > 50 * 1024 * 1024) throw new Error("PDF exceeds 50 MiB limit");
+    const slug = nameOf(name);
+    return this.lock(slug, async () => {
+      const dir = await this.projectFolder(slug);
+      const path = join(dir, "presentation.pdf");
+      const temp = path + "." + randomUUID() + ".tmp";
+      let handle;
+      try {
+        handle = await open(temp, "wx", 0o600);
+        await handle.writeFile(pdf);
+        await handle.sync();
+        await handle.close();
+        handle = undefined;
+        await rename(temp, path);
+      } finally {
+        if (handle) await handle.close();
+        await rm(temp, { force: true }).catch(() => undefined);
+      }
+      return path;
+    });
   }
 
   async exportHtml(name: string, html: string): Promise<string> {

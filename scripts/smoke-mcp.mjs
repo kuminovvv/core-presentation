@@ -125,6 +125,21 @@ try {
   check(saved.slides[0].elements.length === 2, "Document persisted to disk without in-memory state");
   check((await stat(exported.file)).isFile(), "Standalone file is stored alongside the presentation");
 
+  const pdfExport = (await call("presentation_export_pdf", { project: "agent-demo" })).body;
+  const pdfBytes = await readFile(pdfExport.file);
+  check(pdfBytes.subarray(0, 5).toString("utf8") === "%PDF-",
+    "MCP agent exports a printable PDF file");
+
+  const copied = (await call("presentation_duplicate_project", {
+    source: "agent-demo", newName: "agent-copy",
+  })).body;
+  const archived = (await call("presentation_archive_project", {
+    project: "agent-copy", expectedRevision: copied.revision,
+  })).body;
+  check(archived.archived.includes(".trash") &&
+    !(await call("presentation_list", {})).body.projects.some(p => p.name === "agent-copy"),
+    "MCP tools duplicate and archive projects safely");
+
   const removed = (await call("presentation_remove_slide", {
     project: "agent-demo", slideId: slide.slideId,
   })).body;

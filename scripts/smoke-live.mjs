@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -70,6 +70,10 @@ try {
   await page.locator(".cp-element.cp-text").filter({ hasText: "Edited by the MCP agent" }).waitFor({ timeout: 10000 });
   verify(await page.locator("#sync-status").getAttribute("data-state") === "synced",
     "MCP edits appear in browser automatically without importing JSON");
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector("#project-picker")?.value === "live-sync");
+  await page.locator(".cp-element.cp-text").filter({ hasText: "Edited by the MCP agent" }).waitFor();
+  verify(true, "Last opened shared project is restored after a browser reload");
 
   const second = await context.newPage();
   second.on("pageerror", error => errors.push(error.message));
@@ -133,6 +137,27 @@ try {
   await page.waitForFunction(() => document.querySelector("#sync-status")?.dataset.state === "synced");
   const latest = JSON.parse(await readFile(join(temp, "live-sync", "presentation.json"), "utf8"));
   verify(latest.slides[0].elements.length === 2, "Browser and MCP can save independently using shared files");
+
+  await page.locator("#project-actions summary").click();
+  page.once("dialog", async dialog => {
+    verify(dialog.type() === "prompt", "Project duplication requests a destination name");
+    await dialog.accept("browser-copy");
+  });
+  await page.locator("#duplicate-project").click();
+  await page.waitForFunction(() => document.querySelector("#project-picker")?.value === "browser-copy");
+  verify(true, "Project can be duplicated from the browser UI");
+
+  await page.locator("#project-actions summary").click();
+  page.once("dialog", async dialog => {
+    verify(dialog.type() === "confirm", "Project archive asks for confirmation");
+    await dialog.accept();
+  });
+  await page.locator("#archive-project").click();
+  await page.waitForFunction(() => document.querySelector("#project-picker")?.value === "");
+  const trashEntries = await readdir(join(temp, ".trash"));
+  verify(trashEntries.some(name => name.startsWith("browser-copy-")),
+    "Project archive preserves a recoverable copy under .trash");
+
   verify(errors.length === 0, "No browser runtime errors: " + errors.join("; "));
   console.log("Live sync integration test passed.");
 } finally {

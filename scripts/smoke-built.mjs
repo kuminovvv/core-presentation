@@ -58,6 +58,22 @@ try {
   });
   assert(saved.status === 200, "Built server updates projects with revision validation");
 
+  const duplicateRes = await fetch(url + "/api/projects/production-check/duplicate", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "production-copy" }),
+  });
+  const duplicated = await duplicateRes.json();
+  assert(duplicateRes.status === 201 &&
+    duplicated.project.id !== record.project.id, "Project duplication creates another independent deck");
+
+  const archiveRes = await fetch(url + "/api/projects/production-copy", {
+    method: "DELETE", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expectedRevision: duplicated.revision }),
+  });
+  assert(archiveRes.status === 200 &&
+    (await fetch(url + "/api/projects/production-copy")).status === 404,
+    "Archived project disappears from active projects but remains recoverable");
+
   const exported = await fetch(url + "/api/export", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project: deck }),

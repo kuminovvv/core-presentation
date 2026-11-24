@@ -30,6 +30,7 @@ class RemoteError extends Error {
 type Draft = { revision: string; project: Presentation };
 const safeName = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 const key = (name: string) => "core-presentation:draft:" + name;
+const lastProjectKey = "core-presentation:last-project";
 const same = (a: Presentation, b: Presentation) => JSON.stringify(a) === JSON.stringify(b);
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T | null> {
@@ -72,6 +73,42 @@ export class ProjectSync {
     });
   }
   get activeName(): string | null { return this.name; }
+  async restoreLast(): Promise<void> {
+    if (this.name) return;
+    let remembered: string | null = null;
+    try { remembered = localStorage.getItem(lastProjectKey); } catch { /* ignore */ }
+    if (!remembered || !safeName.test(remembered)) return;
+    try { await this.open(remembered); }
+    catch (error) {
+      if (error instanceof RemoteError && error.status === 404) {
+        try { localStorage.removeItem(lastProjectKey); } catch { /* ignore */ }
+      }
+    }
+  }
+  async duplicateCurrent(newName: string): Promise<void> {
+    if (!this.name || !safeName.test(newName) || newName === this.name)
+      throw new Error("Укажите другое имя из латинских букв, цифр, - и _");
+    if (!await this.readyToSwitch()) throw new Error("Разрешите конфликт перед копированием");
+    const record = await request<RemoteProject>("/" + this.name + "/duplicate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+    if (!record) throw new Error("Не удалось скопировать проект");
+    this.clearDraft(newName);
+    this.use(record);
+  }
+  async archiveCurrent(): Promise<void> {
+    if (!this.name || !this.revision) return;
+    if (!await this.readyToSwitch()) throw new Error("Разрешите конфликт перед архивированием");
+    const old = this.name;
+    await request<{ archived: string }>("/" + old, {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedRevision: this.revision }),
+    });
+    this.clearDraft(old);
+    this.localMode();
+  }
+
   get hasUnsavedChanges(): boolean { return this.dirty; }
   get status(): SyncState { return this.lastStatus; }
   private announce(status: SyncStatus, message: string): void {
@@ -91,6 +128,7 @@ export class ProjectSync {
     this.generation += 1;
     this.name = record.name;
     this.revision = record.revision;
+    try { localStorage.setItem(lastProjectKey, record.name); } catch { /* optional */ }
     this.conflict = null;
     this.dirty = false;
     this.saving = false;
@@ -147,6 +185,7 @@ export class ProjectSync {
     this.generation += 1;
     this.name = this.revision = null;
     this.conflict = null;
+    try { localStorage.removeItem(lastProjectKey); } catch { /* ignore */ }
     this.announce("local", "Локальный пример");
   }
   edited(): void {

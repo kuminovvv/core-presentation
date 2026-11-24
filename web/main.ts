@@ -20,12 +20,20 @@ const $ = <T extends HTMLElement>(id: string): T => {
 };
 const escape = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
-const store = new PresentationStore(demoPresentation);
+const localDraftKey = "core-presentation:local-document";
+function localDraft(): Presentation {
+  try {
+    const saved = localStorage.getItem(localDraftKey);
+    if (saved) return parsePresentation(saved);
+  } catch { /* Fall back to example */ }
+  return demoPresentation;
+}
+const store = new PresentationStore(localDraft());
 const stage = $<HTMLDivElement>("editor-stage");
 const shell = $<HTMLDivElement>("stage-shell");
 const props = $<HTMLDivElement>("properties");
 const overlay = $<HTMLDivElement>("preview-overlay");
-let slideId = demoPresentation.slides[0]!.id;
+let slideId = store.value.slides[0]?.id ?? "";
 let scale = 1;
 let player: PresentationPlayer | null = null;
 let applyingRemote = false;
@@ -64,6 +72,7 @@ const sync = new ProjectSync({
     indicator.dataset.state = state.status;
     $("sync-remote").hidden = $("sync-copy").hidden = state.status !== "conflict";
     picker.value = state.name ?? "";
+    $<HTMLDetailsElement>("project-actions").hidden = state.name === null;
   },
 });
 
@@ -91,7 +100,7 @@ picker.addEventListener("change", async () => {
       try {
         canvas.clear();
         slideId = demoPresentation.slides[0]!.id;
-        store.load(demoPresentation);
+        store.load(localDraft());
       } finally { applyingRemote = false; }
     } else {
       await sync.open(picker.value);
@@ -102,6 +111,34 @@ picker.addEventListener("change", async () => {
 });
 
 $("new-project").addEventListener("click", () => dialog.showModal());
+$("duplicate-project").addEventListener("click", async () => {
+  const active = sync.activeName;
+  if (!active) return;
+  const suggestion = (active.slice(0, 56) + "-copy").slice(0, 64);
+  const name = prompt("Имя копии (латиница, цифры, - и _)", suggestion);
+  if (!name) return;
+  try {
+    await sync.duplicateCurrent(name.trim());
+    await refreshProjects();
+  } catch (error) { alert(error instanceof Error ? error.message : String(error)); }
+  $<HTMLDetailsElement>("project-actions").open = false;
+});
+$("archive-project").addEventListener("click", async () => {
+  const active = sync.activeName;
+  if (!active || !confirm('Архивировать проект "' + active + '"? Его файлы будут сохранены в папке .trash.')) return;
+  try {
+    await sync.archiveCurrent();
+    applyingRemote = true;
+    try {
+      canvas.clear();
+      slideId = demoPresentation.slides[0]!.id;
+      store.load(localDraft());
+    } finally { applyingRemote = false; }
+    await refreshProjects();
+  } catch (error) { alert(error instanceof Error ? error.message : String(error)); }
+  $<HTMLDetailsElement>("project-actions").open = false;
+});
+
 $("cancel-project").addEventListener("click", () => dialog.close());
 $<HTMLFormElement>("create-project-form").addEventListener("submit", async event => {
   event.preventDefault();
@@ -133,7 +170,7 @@ $("sync-copy").addEventListener("click", async () => {
     await refreshProjects();
   } catch (error) { alert(error instanceof Error ? error.message : String(error)); }
 });
-window.setInterval(() => { void refreshProjects(); }, 5000);
+window.setInterval(() => { void refreshProjects().then(() => sync.restoreLast()); }, 5000);
 void refreshProjects();
 
 function selected(): { project: Presentation; slide?: Slide; element?: SlideElement } {
@@ -682,7 +719,12 @@ window.addEventListener("keydown", event => {
 });
 store.subscribe(() => {
   render();
-  if (!applyingRemote) sync.edited();
+  if (applyingRemote) return;
+  if (sync.activeName) sync.edited();
+  else {
+    try { localStorage.setItem(localDraftKey, serializePresentation(store.value)); }
+    catch { /* Users can still download their JSON document manually */ }
+  }
 });
 new ResizeObserver(fit).observe(shell);
 render();

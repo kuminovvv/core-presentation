@@ -183,6 +183,16 @@ try {
   check(await page.locator(".slide-row").first().getAttribute("data-slide-id") === lastId,
     "Dragging thumbnails changes slide order");
 
+  await page.reload();
+  const [afterReload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#save").click(),
+  ]);
+  const recovered = JSON.parse(await readFile(await afterReload.path(), "utf8"));
+  check(recovered.slides.some(slide => slide.elements.some(element =>
+    element.type === "text" && element.text === "Edited inline")),
+    "Local unsaved example survives a full browser reload");
+
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

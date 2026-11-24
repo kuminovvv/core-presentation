@@ -74,6 +74,28 @@ describe("MCP project persistence and isolation", () => {
     expect((await repo.read("compare-and-swap")).revision).toBe(newer.revision);
   });
 
+  it("duplicates an editable project without changing its source", async () => {
+    const source = await repo.create("source", "Working deck");
+    const copy = await repo.duplicate("source", "copy");
+    expect(copy.project.id).not.toBe(source.project.id);
+    expect(copy.project.title).toContain("копия");
+    expect((await repo.read("source")).revision).toBe(source.revision);
+    expect((await repo.list()).map(item => item.name)).toEqual(["copy", "source"]);
+    await expect(repo.duplicate("source", "source")).rejects.toThrow();
+    await expect(repo.duplicate("source", "copy")).rejects.toThrow();
+  });
+
+  it("archives projects into recoverable trash and enforces revisions", async () => {
+    const first = await repo.create("archived", "Old project");
+    const newer = await repo.mutate("archived", p => ({ ...p, title: "New project" }));
+    await expect(repo.archive("archived", first.revision)).rejects.toThrow("Revision mismatch");
+    const moved = await repo.archive("archived", newer.revision);
+    expect(moved.archived).toContain(".trash");
+    expect((await repo.list()).some(item => item.name === "archived")).toBe(false);
+    expect(await readFile(join(moved.archived, "presentation.json"), "utf8")).toContain("New project");
+    await expect(repo.read("archived")).rejects.toThrow();
+  });
+
   it("rejects stale revisions and leaves the file untouched", async () => {
     const first = await repo.create("work", "Original");
     const second = await repo.mutate("work", project => ({ ...project, title: "New" }));

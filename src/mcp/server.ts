@@ -7,6 +7,7 @@ import {
   updateElements,
 } from "../core/document";
 import { buildStandaloneHtml } from "../export/standalone.mjs";
+import { buildPdf } from "../export/pdf.mjs";
 import { renderSlide } from "./preview";
 import { ProjectRepository } from "./project-repository";
 
@@ -108,7 +109,7 @@ function editSlide(project: Presentation, slideId: string, patch: {
 }
 
 export function createMcpServer(repo: ProjectRepository): McpServer {
-  const server = new McpServer({ name: "core-presentation", version: "0.3.0" });
+  const server = new McpServer({ name: "core-presentation", version: "0.9.0" });
 
   function add<T extends z.ZodRawShape>(
     name: string,
@@ -141,6 +142,22 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
         width: width ?? 1600, height: height ?? 900,
       });
       return afterEdit(record, { name, file: record.path });
+    });
+
+  add("presentation_duplicate_project",
+    "Duplicate an existing project into a new independent presentation with another name.",
+    z.object({ source: projectName, newName: projectName }),
+    async ({ source, newName }) => {
+      const record = await repo.duplicate(source, newName);
+      return afterEdit(record, { name: newName, file: record.path });
+    });
+
+  add("presentation_archive_project",
+    "Move a project into a recoverable .trash folder. Requires the latest expectedRevision to protect concurrent changes.",
+    z.object({ project: projectName, expectedRevision: z.string().regex(/^[a-f0-9]{64}$/) }),
+    async ({ project, expectedRevision }) => {
+      const result = await repo.archive(project, expectedRevision);
+      return { name: result.name, archived: result.archived };
     });
 
   add("presentation_get",
@@ -307,6 +324,16 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
       const html = await buildStandaloneHtml(record.project);
       return { project, revision: record.revision,
         file: await repo.exportHtml(project, html), slides: record.project.slides.length };
+    });
+
+  add("presentation_export_pdf",
+    "Export all slides to a printable multi-page PDF alongside the project. Requires Google Chrome.",
+    z.object({ project: projectName }),
+    async ({ project }) => {
+      const record = await repo.read(project);
+      const pdf = await buildPdf(record.project);
+      const file = await repo.exportPdf(project, pdf);
+      return { project, file, revision: record.revision, bytes: pdf.length, slides: record.project.slides.length };
     });
 
   server.registerTool("presentation_render_slide", {

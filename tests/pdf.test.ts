@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createPresentation, createSlide, createElement } from "../src/core/document";
 import { validatePresentation } from "../src/core/validation";
+import type { TextElement, ImageElement, HtmlElement } from "../src/core/types";
 
 describe("presentation PDF format", () => {
   it("supports native text, embedded images and HTML widgets without flattening the source project", async () => {
@@ -8,14 +9,14 @@ describe("presentation PDF format", () => {
     const pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aZkAAAAASUVORK5CYII=";
     const deck = createPresentation("PDF export");
     const first = createSlide("Slide 1");
-    const title = createElement("text");
+    const title = createElement("text") as TextElement;
     title.text = "Printable text";
     title.fontSize = 72;
     deck.slides.push({ ...first, elements: [title] });
     const second = createSlide("Slide 2");
-    const image = createElement("image");
+    const image = createElement("image") as ImageElement;
     image.src = "data:image/png;base64," + pixel;
-    const widget = createElement("html");
+    const widget = createElement("html") as HtmlElement;
     widget.html = "<h1>Custom HTML</h1>";
     deck.slides.push({ ...second, elements: [image, widget] });
     validatePresentation(deck);

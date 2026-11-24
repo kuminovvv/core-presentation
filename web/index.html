@@ -13,6 +13,13 @@
         <div class="project-switcher">
           <select id="project-picker" aria-label="Проект"><option value="">Локальный пример</option></select>
           <button id="new-project" type="button" title="Новая презентация">＋</button>
+          <details id="project-actions" class="project-actions" hidden>
+            <summary title="Действия с проектом">•••</summary>
+            <div class="project-actions-menu">
+              <button type="button" id="duplicate-project">Создать копию</button>
+              <button type="button" id="archive-project">Архивировать проект</button>
+            </div>
+          </details>
         </div>
         <div class="project-name"><input id="project-title" aria-label="Название презентации" maxlength="140" /></div>
         <div class="toolbar right">

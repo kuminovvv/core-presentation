@@ -109,7 +109,26 @@ async function processApi(
     json(res, 201, { name: input.name, project: record.project, revision: record.revision });
     return;
   }
+  if (name.endsWith("/duplicate")) {
+    const sourceName = name.slice(0, -"/duplicate".length);
+    if (!VALID_NAME.test(sourceName)) throw new ApiError(404, "Unknown project");
+    if (method !== "POST") throw new ApiError(405, "Unsupported method");
+    const input = await bodyOf(req);
+    if (typeof input.name !== "string" || !VALID_NAME.test(input.name))
+      throw new ApiError(400, "Invalid destination project name");
+    const record = await repository.duplicate(sourceName, input.name);
+    json(res, 201, { name: input.name, project: record.project, revision: record.revision });
+    return;
+  }
   if (!VALID_NAME.test(name)) throw new ApiError(404, "Unknown project");
+  if (method === "DELETE") {
+    const input = await bodyOf(req);
+    if (typeof input.expectedRevision !== "string" || !REVISION.test(input.expectedRevision))
+      throw new ApiError(428, "expectedRevision is required");
+    const archived = await repository.archive(name, input.expectedRevision);
+    json(res, 200, archived);
+    return;
+  }
   if (method === "GET") {
     const record = await repository.read(name);
     if (req.headers["if-none-match"] === '"' + record.revision + '"')
