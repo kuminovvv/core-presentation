@@ -146,6 +146,12 @@ export class ProjectRepository {
     });
   }
 
+  /** Full-document save with a mandatory compare-and-swap revision. */
+  async replace(name: string, project: Presentation, expectedRevision: string): Promise<ProjectRecord> {
+    if (!/^[a-f0-9]{64}$/.test(expectedRevision)) throw new Error("Expected revision is required");
+    return this.mutate(name, () => project, expectedRevision);
+  }
+
   async exportHtml(name: string, html: string): Promise<string> {
     const slug = nameOf(name);
     return this.lock(slug, async () => {
@@ -156,6 +162,33 @@ export class ProjectRepository {
     });
   }
 
+  /**
+   * Coordinates different MCP processes and the web API by one per-project lockfile.
+   * This supplements the in-process queue (which also preserves mutation order).
+   */
+  private async acquireFileLock(name: string): Promise<() => Promise<void>> {
+    const root = await this.checkedRoot();
+    const path = join(root, "." + name + ".write-lock");
+    const deadline = Date.now() + 12000;
+    while (true) {
+      try {
+        const file = await open(path, "wx", 0o600);
+        try { await file.writeFile(JSON.stringify({ pid: process.pid, created: Date.now() })); }
+        finally { await file.close(); }
+        return async () => { await rm(path, { force: true }); };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        const lock = await lstat(path).catch(() => undefined);
+        if (lock && Date.now() - lock.mtimeMs > 60000) {
+          await rm(path, { force: true }).catch(() => undefined);
+          continue;
+        }
+        if (Date.now() >= deadline) throw new Error("Project is busy; please retry");
+        await new Promise<void>(resolve => setTimeout(resolve, 50));
+      }
+    }
+  }
+
   private async lock<T>(name: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.tails.get(name) ?? Promise.resolve();
     let release!: () => void;
@@ -163,9 +196,12 @@ export class ProjectRepository {
     const next = previous.then(() => waiter);
     this.tails.set(name, next);
     await previous;
+    let unlock: (() => Promise<void>) | undefined;
     try {
+      unlock = await this.acquireFileLock(name);
       return await operation();
     } finally {
+      if (unlock) await unlock();
       release();
       if (this.tails.get(name) === next) this.tails.delete(name);
     }

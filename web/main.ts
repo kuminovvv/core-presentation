@@ -8,6 +8,7 @@ import type { ElementKind, Presentation, Slide, SlideElement } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
 import { unionBounds } from "../src/editor/geometry";
+import { ProjectSync } from "./project-sync";
 import "./style.css";
 
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -25,6 +26,7 @@ const overlay = $<HTMLDivElement>("preview-overlay");
 let slideId = demoPresentation.slides[0]!.id;
 let scale = 1;
 let player: PresentationPlayer | null = null;
+let applyingRemote = false;
 const canvas = new CanvasInteractions(stage, {
   project: () => store.value,
   slideId: () => slideId,
@@ -32,6 +34,105 @@ const canvas = new CanvasInteractions(stage, {
   commit: patches => store.update(project => updateElements(project, patches)),
   selectionChanged: () => { renderProperties(); renderTimeline(); },
 });
+
+const picker = $<HTMLSelectElement>("project-picker");
+const dialog = $<HTMLDialogElement>("create-project-dialog");
+const sync = new ProjectSync({
+  current: () => store.value,
+  load: project => {
+    applyingRemote = true;
+    try {
+      if (store.value.id !== project.id) {
+        canvas.clear();
+        slideId = project.slides[0]?.id ?? "";
+      } else if (!project.slides.some(slide => slide.id === slideId)) {
+        canvas.clear();
+        slideId = project.slides[0]?.id ?? "";
+      }
+      store.load(project);
+    } finally {
+      applyingRemote = false;
+    }
+  },
+  canApplyRemote: () => !document.hidden &&
+    !document.activeElement?.matches("input,textarea,select,[contenteditable='true']"),
+  onState: state => {
+    const indicator = $("sync-status");
+    indicator.textContent = state.message;
+    indicator.dataset.state = state.status;
+    $("sync-remote").hidden = $("sync-copy").hidden = state.status !== "conflict";
+    picker.value = state.name ?? "";
+  },
+});
+
+async function refreshProjects(): Promise<void> {
+  try {
+    const available = await sync.list();
+    const selectedName = sync.activeName ?? "";
+    const signature = available.map(item => item.name + ":" + item.title).join("|");
+    if (picker.dataset.signature !== signature) {
+      picker.replaceChildren(new Option("Локальный пример", ""));
+      for (const project of available) picker.add(new Option(project.title + " (" + project.name + ")", project.name));
+      picker.dataset.signature = signature;
+    }
+    picker.value = selectedName;
+  } catch {
+    // Offline mode continues to work without a local project server.
+  }
+}
+
+picker.addEventListener("change", async () => {
+  try {
+    if (!picker.value) {
+      sync.localMode();
+      applyingRemote = true;
+      try {
+        canvas.clear();
+        slideId = demoPresentation.slides[0]!.id;
+        store.load(demoPresentation);
+      } finally { applyingRemote = false; }
+    } else {
+      await sync.open(picker.value);
+    }
+  } catch (error) {
+    alert(error instanceof Error ? error.message : String(error));
+  } finally { picker.value = sync.activeName ?? ""; }
+});
+
+$("new-project").addEventListener("click", () => dialog.showModal());
+$("cancel-project").addEventListener("click", () => dialog.close());
+$<HTMLFormElement>("create-project-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = $<HTMLButtonElement>("confirm-project");
+  const name = $<HTMLInputElement>("new-project-name").value.trim();
+  const title = $<HTMLInputElement>("new-project-title").value.trim();
+  button.disabled = true;
+  $("project-error").textContent = "";
+  try {
+    await sync.create(name, title);
+    dialog.close();
+    await refreshProjects();
+  } catch (error) {
+    $("project-error").textContent = error instanceof Error ? error.message : String(error);
+  } finally { button.disabled = false; }
+});
+
+$("sync-remote").addEventListener("click", async () => {
+  if (!confirm("Заменить локальные изменения последней версией агента? Несохранённые изменения будут потеряны.")) return;
+  try { await sync.loadServerVersion(); } catch (error) {
+    alert(error instanceof Error ? error.message : String(error));
+  }
+});
+$("sync-copy").addEventListener("click", async () => {
+  const name = prompt("Имя новой копии (латиница, цифры, - и _):");
+  if (!name) return;
+  try {
+    await sync.saveConflictCopy(name.trim());
+    await refreshProjects();
+  } catch (error) { alert(error instanceof Error ? error.message : String(error)); }
+});
+window.setInterval(() => { void refreshProjects(); }, 5000);
+void refreshProjects();
 
 function selected(): { project: Presentation; slide?: Slide; element?: SlideElement } {
   const project = store.value;
@@ -380,7 +481,9 @@ window.addEventListener("keydown", event => {
   const command = event.ctrlKey || event.metaKey;
   const key = event.key.toLowerCase();
   if (command && key === "s") {
-    event.preventDefault(); download("presentation.json", serializePresentation(store.value));
+    event.preventDefault();
+    if (sync.activeName) void sync.flush();
+    else download("presentation.json", serializePresentation(store.value));
   } else if (command && key === "z") {
     event.preventDefault(); if (event.shiftKey) store.redo(); else store.undo();
   } else if (command && key === "y") {
@@ -408,6 +511,9 @@ window.addEventListener("keydown", event => {
     store.update(project => updateElements(project, patches));
   }
 });
-store.subscribe(render);
+store.subscribe(() => {
+  render();
+  if (!applyingRemote) sync.edited();
+});
 new ResizeObserver(fit).observe(shell);
 render();

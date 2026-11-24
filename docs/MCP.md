@@ -81,6 +81,14 @@ The returned IDs and `revision` are stable references. You can pass `expectedRev
 | `presentation_render_slide` | Return a PNG screenshot (Chrome required) |
 | `presentation_export_html` | Save a browser-ready standalone HTML file |
 
+## Live collaboration with the web editor
+
+Run `npm run dev` in the same repository used by Codex. Open `http://127.0.0.1:5173/`, select the MCP project from the top toolbar, or create a new project there. When MCP changes the document, the editor updates the slide canvas automatically. Browser changes are saved in the same project folder.
+
+The Vite development server provides a localhost-only JSON API at `/api/projects`. It does not expose any API in the standalone exported presentation. Browser saves always include the revision they were based on; concurrent writes from the MCP process and browser use a shared lockfile. When versions diverge, the browser offers **Версия агента** (discard local unsaved edits) or **Сохранить копию** (save the browser version as another project).
+
+The polling interval is approximately 1.4 seconds. It intentionally synchronizes whole documents, rather than attempting collaborative character-by-character typing. A localStorage draft helps recover changes across browser reloads.
+
 ## Where projects live
 
 By default, projects are in `<repository>/presentations/<project-name>/presentation.json`. The project directory and all its subfolders are ignored by Git. Exports are saved alongside their JSON file.

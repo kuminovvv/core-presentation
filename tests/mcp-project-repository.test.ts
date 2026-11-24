@@ -51,6 +51,29 @@ describe("MCP project persistence and isolation", () => {
     expect(new Set(saved.project.slides.map(slide => slide.name)).size).toBe(12);
   });
 
+  it("coordinates independent repository instances using file locks", async () => {
+    await repo.create("two-processes", "Shared");
+    const independent = new ProjectRepository(root);
+    await Promise.all(Array.from({ length: 8 }, (_, i) => {
+      const targetRepo = i % 2 ? independent : repo;
+      return targetRepo.mutate("two-processes",
+        project => addSlide(project, createSlide("Writer " + i)));
+    }));
+    const latest = await new ProjectRepository(root).read("two-processes");
+    expect(latest.project.slides).toHaveLength(8);
+    expect(new Set(latest.project.slides.map(slide => slide.name)).size).toBe(8);
+  });
+
+  it("rejects stale full-document replacement even across repository instances", async () => {
+    const original = await repo.create("compare-and-swap", "Initial");
+    const other = new ProjectRepository(root);
+    const newer = await other.mutate("compare-and-swap",
+      project => ({ ...project, title: "AI update" }));
+    await expect(repo.replace("compare-and-swap",
+      { ...original.project, title: "Web edit" }, original.revision)).rejects.toThrow("Revision mismatch");
+    expect((await repo.read("compare-and-swap")).revision).toBe(newer.revision);
+  });
+
   it("rejects stale revisions and leaves the file untouched", async () => {
     const first = await repo.create("work", "Original");
     const second = await repo.mutate("work", project => ({ ...project, title: "New" }));

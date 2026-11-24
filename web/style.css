@@ -173,3 +173,32 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .slide-row .slide-number, .slide-row .slide-title { display: none; }
   .timeline-row { grid-template-columns: 85px minmax(65px,1fr) 50px 50px; gap: 3px; }
 }
+
+/* Shared agent/browser projects */
+.project-switcher { display:flex;align-items:center;gap:6px;min-width:150px; }
+.project-switcher select { width:min(235px,19vw); min-width:125px; height:36px; border:1px solid #3b4862; background:#202b40; color:#d7e0f2; border-radius:9px; font-size:12px; padding:0 9px; }
+.project-switcher button { height:36px; width:36px; border:1px solid #3b4862; background:#26334d; color:#e2eaff; border-radius:9px; font-size:20px; }
+#sync-status { flex-shrink:0; font-size:11px; color:#9caecc; white-space:nowrap; max-width:210px; overflow:hidden; text-overflow:ellipsis; }
+#sync-status[data-state="synced"] { color:#9ed7b4; }
+#sync-status[data-state="dirty"], #sync-status[data-state="saving"] { color:#f3c987; }
+#sync-status[data-state="conflict"], #sync-status[data-state="offline"] { color:#ffa8aa; }
+#sync-remote:not([hidden]), #sync-copy:not([hidden]) { border:1px solid #b58b65; }
+.project-dialog { border:1px solid #394968; background:#151f33; color:#edf3ff; padding:26px; border-radius:15px; width:min(430px,95vw); box-shadow:0 25px 80px #0009; }
+.project-dialog::backdrop { background:#02050bbb; }
+.project-dialog h2 { margin:0 0 7px; font-size:21px; }
+.project-dialog p { color:#a4b4d0; font-size:12px; line-height:1.6; }
+.project-dialog form { display:flex; flex-direction:column; gap:14px; }
+.project-dialog label { display:flex; flex-direction:column; gap:8px; font-size:12px; color:#b5c5e0; }
+.project-dialog input { border:1px solid #394966; border-radius:8px; color:#fff; background:#0d1524; padding:12px; }
+.project-dialog .project-error { color:#ffb4b4; margin:0; }
+.dialog-actions { display:flex; gap:10px; justify-content:flex-end; }
+.dialog-actions button { padding:10px 16px; border:1px solid #445679; border-radius:8px; color:#e9efff; background:#2a3954; cursor:pointer; }
+.dialog-actions button[type="submit"] { background:#7489f9; color:#0d1530; font-weight:700; }
+@media(max-width:1500px) {
+  #sync-status { max-width:115px; }
+  .project-name { display:none; }
+}
+@media(max-width:1050px) {
+  #sync-status { max-width:92px; }
+  .project-switcher select { width:135px; min-width:100px; }
+}

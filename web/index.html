@@ -10,6 +10,10 @@
     <div id="app">
       <header class="topbar">
         <div class="brand"><span class="brand-mark">C<span>●</span></span><span>core<span class="brand-muted">/presentation</span></span><span class="tag">ALPHA</span></div>
+        <div class="project-switcher">
+          <select id="project-picker" aria-label="Проект"><option value="">Локальный пример</option></select>
+          <button id="new-project" type="button" title="Новая презентация">＋</button>
+        </div>
         <div class="project-name"><input id="project-title" aria-label="Название презентации" maxlength="140" /></div>
         <div class="toolbar right">
           <button id="undo" title="Отменить (Ctrl+Z)">↶</button>
@@ -17,6 +21,9 @@
           <span class="separator"></span>
           <label for="import-file" class="button secondary">Импорт JSON</label>
           <input id="import-file" type="file" accept=".json,application/json" hidden />
+          <span id="sync-status" data-state="local" role="status" aria-live="polite">Локальный пример</span>
+          <button id="sync-remote" class="secondary" type="button" hidden>Версия агента</button>
+          <button id="sync-copy" class="secondary" type="button" hidden>Сохранить копию</button>
           <button id="save" class="secondary">Сохранить JSON</button>
           <button id="preview" class="primary">▶ Предпросмотр</button>
         </div>
@@ -63,6 +70,19 @@
         <button id="preview-close" class="preview-close">✕ Закрыть</button>
       </div>
     </div>
+    <dialog id="create-project-dialog" class="project-dialog">
+      <form id="create-project-form">
+        <h2>Новая презентация</h2>
+        <p>Проект будет доступен в редакторе и через MCP.</p>
+        <label>Название<input id="new-project-title" required maxlength="300" placeholder="Моя презентация"></label>
+        <label>Имя папки<input id="new-project-name" required pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}" maxlength="64" placeholder="my-presentation"></label>
+        <p id="project-error" class="project-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="cancel-project" type="button">Отмена</button>
+          <button id="confirm-project" type="submit">Создать проект</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="/main.ts"></script>
   </body>
 </html>

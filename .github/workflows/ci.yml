@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:mcp
+      - name: MCP and browser live synchronization
+        run: npm run test:live
       - run: npm run build
       - name: Visual editor browser smoke tests
         run: npm run test:e2e

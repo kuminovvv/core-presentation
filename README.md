@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.3 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.4 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -29,7 +29,7 @@ Core Presentation now includes a **local stdio MCP server** supporting **18 type
 npm run mcp
 ```
 
-To connect Codex on Windows, see the complete setup and tool catalog in **[docs/MCP.md](docs/MCP.md)**. The server never needs a token or an HTTP port. It saves projects under an isolated `presentations/` directory. AI changes are written to disk; the current web editor can open the resulting `presentation.json` using **Импорт JSON**. Live disk synchronization in the browser is not yet implemented.
+To connect Codex on Windows, see the complete setup and tool catalog in **[docs/MCP.md](docs/MCP.md)**. The server never needs a token or an HTTP port. It saves projects under an isolated `presentations/` directory. AI and browser edits now share the same file-backed projects. Choose a project in the top toolbar or create a new one. Browser changes auto-save and the editor fetches agent changes roughly every 1.4 seconds, without manual JSON import. Revision conflicts cannot silently overwrite newer edits: select **Версия агента** to discard the local copy, or **Сохранить копию** to preserve it as a separate project.
 
 ### Visual editing & shortcuts
 
@@ -55,6 +55,20 @@ Select **Анимации** in the canvas toolbar to open a basic timeline: insp
 
 Limitations in v0.2: rotation and resizing are supported, but rotated multi-selection uses logical unrotated group bounds for alignment and resizing; no aspect-ratio lock, multi-user collaboration, image asset embedding, keyframe timeline or native Rust UI yet.
 
+### Live editing between the agent and browser
+
+Start the editor with `npm run dev`, open `http://127.0.0.1:5173`, and create/select a shared project using the top toolbar. Have Codex use MCP `presentation_get`, `presentation_add_slide`, and `presentation_update_elements` on that same project. Changes are automatically reflected on the canvas. In the other direction, browser edits are persisted to `presentations/<name>/presentation.json` after a short debounce.
+
+- Project API is available **only on the local Vite development server** and accepts same-origin localhost requests.
+- Project files are shared through an isolated root directory; writes are protected by revision checks and a cross-process project lock.
+- Unsaved browser drafts are backed up in localStorage. If another writer changes the project first, editing pauses in an explicit conflict state with two recovery choices.
+- Standalone exported HTML files do **not** require this local API.
+- Live editing synchronizes document state, not cursors or keystrokes; two simultaneous edits to one document may require conflict resolution.
+
+```bash
+npm run test:live
+```
+
 ## Export a presentation to a single HTML file
 
 ```bash
@@ -76,6 +90,8 @@ src/
     store.ts        Undo/redo, event subscription
   editor/
     geometry.ts     Pure resize, rotate, snap and marquee functions
+  server/
+    project-api.ts  Localhost-only project API for the web editor
   mcp/
     project-repository.ts   File storage, revision checking, atomic saves
     server.ts       Typed MCP tools for AI agents
@@ -94,12 +110,14 @@ web/
   index.html        Studio interface
   main.ts           First visual editor implementation
   canvas-interactions.ts  Canvas manipulation / selection controller
+  project-sync.ts  Debounced autosave, polling, conflict management
   style.css
 scripts/
   export-html.mjs   Single-file HTML export
   launch-mcp.mjs    Portable Codex/stdio launcher
   smoke-editor.mjs  Real Chrome editor gesture test
   smoke-mcp.mjs     MCP client end-to-end tool test
+  smoke-live.mjs    Browser + MCP cross-process synchronization test
 examples/
   basic.json        Open-format presentation with interactive JS
 tests/
@@ -183,16 +201,17 @@ npm test
 npm run build
 npm run test:e2e
 npm run test:mcp
+npm run test:live
 ```
 
-The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, MCP tool integration tests, production build and standalone export on each push to `main` and pull request.
+The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, MCP tool integration tests, live cross-process synchronization tests, production build and standalone export on each push to `main` and pull request.
 
 ## Planned work
 
 - Rich editor interactions: aspect-ratio locking, precision rotated-group bounds, editable selection handles for skew, distributions and rulers.
 - Rich text, typography, asset library, charts and reusable components.
 - Advanced keyframe animation timeline, triggers and additional transitions.
-- Live project sync between the agent's file-backed projects and the visual web editor.
+- Real-time multi-user cursors, shared selections and more granular conflict merging.
 - Offline file/project manager and improved export/asset packaging.
 - Native Rust application **after** the engine and web editor have matured.
 

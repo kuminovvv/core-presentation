@@ -32,6 +32,15 @@ export class PresentationStore {
     this.emit();
   }
   replace(project: Presentation): void { this.update(() => project); }
+
+  /** Opening a different project or applying remote changes resets history. */
+  load(project: Presentation): void {
+    validatePresentation(project);
+    this.current = structuredClone(project);
+    this.past = [];
+    this.future = [];
+    this.emit();
+  }
   undo(): boolean {
     const previous = this.past.pop();
     if (!previous) return false;

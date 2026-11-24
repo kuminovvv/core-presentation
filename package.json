@@ -1,6 +1,6 @@
 {
   "name": "core-presentation",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "export:html": "node scripts/export-html.mjs",
     "mcp": "node scripts/launch-mcp.mjs",
-    "test:mcp": "node scripts/smoke-mcp.mjs"
+    "test:mcp": "node scripts/smoke-mcp.mjs",
+    "test:live": "node scripts/smoke-live.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.4.0",

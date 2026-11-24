@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0] — 2026-11-24
+
+### Added
+
+- Two-way synchronization between the browser studio and MCP project directory.
+- Localhost-only same-origin project API embedded in the Vite development server.
+- Project picker, new-project dialog, save status, local JSON drafts and conflict recovery.
+- Browser autosave and automatic refresh for MCP writes, without importing JSON.
+- Cross-process lockfiles and mandatory revision checks for browser full-document writes.
+- End-to-end browser+MCP test for autosave, remote refresh, conflicting edits and saved copies.
+
+### Known limits
+
+- Whole-document synchronization is near-live (approximately 1.4 seconds), not cursor-level co-editing.
+- The API is available in the development server only; standalone HTML remains self-contained.
+- Simultaneous writes to the same project require explicit conflict resolution.
+
+
 ## [0.3.0] — 2026-11-23
 
 ### Added
