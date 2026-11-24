@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0] — 2026-11-24
+
+### Added
+
+- Optional authenticated Streamable HTTP MCP server using the official TypeScript v2 per-request `createMcpHandler` API.
+- MCP 2026-07-28 stateless tool support while retaining the original local stdio transport.
+- Loopback-only HTTP listener, strong bearer token requirement, Origin/Host validation, 1 MiB request limit.
+- HTTP integration tests for protocol negotiation, cross-client project operations, legacy fallback and security failures.
+- Drive-independent Windows instructions and secure SSH-tunnel guidance.
+
+### Security and limitations
+
+- The HTTP endpoint defaults to localhost and is **not** an internet-facing service.
+- Bearer tokens are local shared secrets; this is **not** an OAuth protected resource or an OAuth authorization server.
+- Use SSH tunneling or an OAuth-enabled gateway with TLS for remote connectivity.
+
+
 ## [1.0.0] — 2026-11-24
 
 ### Stable web edition

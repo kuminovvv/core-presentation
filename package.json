@@ -1,6 +1,6 @@
 {
   "name": "core-presentation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit",
     "export:html": "node scripts/export-html.mjs",
     "mcp": "node scripts/launch-mcp.mjs",
+    "mcp:http": "node scripts/launch-mcp-http.mjs",
+    "test:mcp:http": "node --import tsx scripts/smoke-mcp-http.mjs",
     "test:mcp": "node scripts/smoke-mcp.mjs",
     "test:live": "node scripts/smoke-live.mjs"
   },
