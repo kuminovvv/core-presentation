@@ -26,7 +26,16 @@ jobs:
       - name: Test built web studio and shared API
         run: npm run test:built
       - name: Visual editor browser smoke tests
+        env:
+          STUDIO_THEME_SCREENSHOTS: .artifacts/studio
         run: npm run test:e2e
+      - name: Studio light and dark screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-themes
+          path: .artifacts/studio-*.png
+          if-no-files-found: ignore
       - run: npm run export:html -- examples/basic.json /tmp/basic-presentation.html
 
   windows:

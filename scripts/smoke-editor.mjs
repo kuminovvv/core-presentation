@@ -1,6 +1,7 @@
 /** Browser smoke test using an already installed Chrome; no browser download needed. */
 process.env.CORE_PRESENTATION_PDF_DEBUG = "1";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
@@ -51,7 +52,22 @@ try {
   await page.locator("#theme-picker").selectOption("light");
   check(await page.locator(".sidebar").evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius)) >= 18,
     "Rounded panel styling is applied");
+  const originalWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
+  await page.locator("#slides-resizer").focus();
+  await page.keyboard.press("ArrowRight");
+  const resizedWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
+  check(resizedWidth > originalWidth, "Slide panel can be resized with keyboard");
+  await page.keyboard.press("ArrowLeft");
+  await page.locator("#toggle-inspector").click();
+  check(await page.locator("#inspector-panel").isHidden(), "Inspector can be collapsed");
+  await page.locator("#toggle-inspector").click();
+  check(await page.locator("#inspector-panel").isVisible(), "Inspector can be restored");
+  await page.locator("#toggle-slides").click();
+  check(await page.locator("#slides-panel").isHidden(), "Slide panel can be collapsed");
+  await page.locator("#toggle-slides").click();
+  check(await page.locator("#slides-panel").isVisible(), "Slide panel can be restored");
   if (process.env.STUDIO_THEME_SCREENSHOTS) {
+    await mkdir(dirname(process.env.STUDIO_THEME_SCREENSHOTS), { recursive: true });
     await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-light.png" });
     await page.locator("#theme-picker").selectOption("dark");
     await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-dark.png" });

@@ -13,8 +13,10 @@ import { createLayoutSlide } from "../src/editor/layouts";
 import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
 import { initTheme } from "./theme";
+import { initPanels } from "./panels";
 
 initTheme();
+initPanels();
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);

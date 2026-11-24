@@ -9,12 +9,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "node_modules\tsx" (
+if not exist "node_modules\tsx" goto :install
+if not exist "node_modules\basecoat-css\dist\basecoat.cdn.min.css" goto :install
+goto :build
+
+:install
+(
   echo Installing Core Presentation dependencies...
   call npm.cmd ci
   if errorlevel 1 goto :failed
 )
 
+:build
 echo Building Core Presentation...
 call npm.cmd run build
 if errorlevel 1 goto :failed
