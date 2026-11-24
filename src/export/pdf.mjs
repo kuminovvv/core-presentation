@@ -46,13 +46,14 @@ export async function buildPdf(project) {
     await page.setContent(html, { waitUntil: "load" });
     trace("setContent complete");
     await page.waitForFunction(() => document.documentElement.dataset.ready === "true");
-    trace("waiting fonts and images");
+    // setContent(load) already waits for image load/error events. Some broken data
+    // URLs never settle image.complete consistently, so do not wait indefinitely.
+    trace("waiting for fonts (bounded)");
     await page.evaluate(async () => {
-      await document.fonts.ready;
-      await Promise.all(Array.from(document.images, image =>
-        image.complete ? Promise.resolve() :
-          new Promise(resolve => { image.addEventListener("load", resolve, { once: true });
-            image.addEventListener("error", resolve, { once: true }); })));
+      await Promise.race([
+        document.fonts.ready,
+        new Promise(resolve => setTimeout(resolve, 1500)),
+      ]);
     });
     trace("rendering PDF");
     const bytes = await page.pdf({
