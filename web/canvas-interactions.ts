@@ -136,7 +136,7 @@ export class CanvasInteractions {
   };
 
   private begin(event: PointerEvent, gesture: Gesture): void {
-    event.preventDefault();
+    // Do not cancel pointerdown: Chrome needs native click/dblclick events for inline text editing.
     const project = this.hooks.project();
     gesture.all = project.slides.find(s => s.id === this.hooks.slideId())?.elements ?? [];
     gesture.viewport = project.viewport;
@@ -149,6 +149,7 @@ export class CanvasInteractions {
 
   private onMove = (event: PointerEvent): void => {
     const gesture = this.gesture;
+    if (gesture) event.preventDefault();
     if (!gesture || event.pointerId !== gesture.pointerId) return;
     const at = this.point(event);
     const dx = at.x - gesture.startX, dy = at.y - gesture.startY;
