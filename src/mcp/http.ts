@@ -163,7 +163,7 @@ export function createMcpHttpServer(options: McpHttpOptions) {
         if (!res.writableEnded) controller.abort();
       });
       const webRequest = new Request("http://" + req.headers.host + "/mcp", {
-        method: "POST", headers, body, signal: controller.signal,
+        method: "POST", headers, body: new Uint8Array(body), signal: controller.signal,
       });
       const result = await handler.fetch(webRequest);
       await sendWebResponse(res, result);
