@@ -135,7 +135,7 @@ export class CanvasInteractions {
     });
   };
 
-  private begin(event: PointerEvent, gesture: Gesture): void {
+  private begin(_event: PointerEvent, gesture: Gesture): void {
     // Do not cancel pointerdown: Chrome needs native click/dblclick events for inline text editing.
     const project = this.hooks.project();
     gesture.all = project.slides.find(s => s.id === this.hooks.slideId())?.elements ?? [];
