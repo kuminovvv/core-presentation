@@ -25,7 +25,7 @@ try {
   const denied = await fetch(url + "/api/projects", { headers: { Origin: "https://evil.test" } });
   assert(denied.status === 403, "Cross-origin project API access is forbidden");
   // Node fetch normalizes Host automatically; use a raw HTTP request to test rebinding.
-  const rebinding = await new Promise<number>((resolve, reject) => {
+  const rebinding = await new Promise((resolve, reject) => {
     const call = httpRequest({
       hostname: "127.0.0.1", port: address.port, method: "GET", path: "/api/projects",
       headers: { Host: "untrusted.example" },
