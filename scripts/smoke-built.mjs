@@ -1,3 +1,4 @@
+import { request as httpRequest } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,10 +24,19 @@ try {
   assert(home.status === 200 && html.includes("Core Presentation"), "Built editor serves its HTML");
   const denied = await fetch(url + "/api/projects", { headers: { Origin: "https://evil.test" } });
   assert(denied.status === 403, "Cross-origin project API access is forbidden");
-  const rebinding = await fetch(url + "/api/projects", {
-    headers: { Host: "untrusted.example" },
+  // Node fetch normalizes Host automatically; use a raw HTTP request to test rebinding.
+  const rebinding = await new Promise<number>((resolve, reject) => {
+    const call = httpRequest({
+      hostname: "127.0.0.1", port: address.port, method: "GET", path: "/api/projects",
+      headers: { Host: "untrusted.example" },
+    }, response => {
+      response.resume();
+      response.on("end", () => resolve(response.statusCode ?? 0));
+    });
+    call.on("error", reject);
+    call.end();
   });
-  assert(rebinding.status === 403, "DNS-rebinding Host header is rejected");
+  assert(rebinding === 403, "DNS-rebinding Host header is rejected");
 
   const created = await fetch(url + "/api/projects", {
     method: "POST", headers: { "Content-Type": "application/json" },
