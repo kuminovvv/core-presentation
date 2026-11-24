@@ -26,3 +26,22 @@ jobs:
       - name: Visual editor browser smoke tests
         run: npm run test:e2e
       - run: npm run export:html -- examples/basic.json /tmp/basic-presentation.html
+
+  windows:
+    name: Windows compatibility
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Windows production browser smoke test
+        run: npm run test:built
+      - name: Windows MCP client test
+        run: npm run test:mcp

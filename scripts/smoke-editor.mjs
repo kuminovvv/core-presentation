@@ -212,6 +212,17 @@ try {
     element.type === "text" && element.text === "Edited inline")),
     "Local unsaved example survives a full browser reload");
 
+  await page.locator('input[data-field="viewportWidth"]').fill("1280");
+  await page.locator('input[data-field="viewportWidth"]').blur();
+  check((await page.locator("#viewport-label").textContent()).includes("1280 × 900"),
+    "Inspector updates slide dimensions and canvas status");
+  await page.locator("#add-text").click();
+  await page.locator('input[data-field="fontFamily"]').fill("Georgia, serif");
+  await page.locator('input[data-field="fontFamily"]').blur();
+  const family = await page.locator(".cp-element.cp-text").filter({ hasText: "Your text" })
+    .evaluate(element => getComputedStyle(element).fontFamily);
+  check(family.includes("Georgia"), "Typography inspector applies a custom font family");
+
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

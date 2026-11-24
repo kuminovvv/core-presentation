@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.0] — 2026-11-24
+
+### Stable web edition
+
+- Complete local browser workflow: create or duplicate presentations, edit text, shapes, images and HTML/CSS/JavaScript, customize typography/viewport, play fullscreen, export HTML/PDF.
+- Projects persist automatically, last opened projects restore, and archived projects remain recoverable.
+- AI agents manage presentations through 21 typed MCP tools, live-sync to the web studio, and inspect PNG previews.
+- Cross-platform CI now checks Linux and Windows execution, including the built Node studio and MCP client.
+- Windows launcher can build/start the web edition without manually typing terminal commands.
+
+### Future work
+
+- Rust-native editor, collaborative cursors, advanced keyframes and rich text are separate future editions. These features are not claimed for the web 1.0 edition.
+
+
 ## [0.9.0] — 2026-11-24
 
 ### Added

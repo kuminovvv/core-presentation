@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.9 release candidate. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v1.0 — stable, local-first web studio and MCP engine. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Start editing on Windows
 
@@ -27,7 +27,7 @@ The visual editor supports adding and removing slides; adding text, shapes, imag
 
 ### Create presentations with an AI agent
 
-Core Presentation now includes a **local stdio MCP server** supporting **18 typed tools** for creating and reading projects, editing slides, changing text/CSS/animations, grouping objects, screenshotting slides, and exporting standalone HTML. It works with Codex and any MCP client implementing stdio.
+Core Presentation now includes a **local stdio MCP server** supporting **21 typed tools** for creating and reading projects, editing slides, changing text/CSS/animations, grouping objects, screenshotting slides, and exporting standalone HTML. It works with Codex and any MCP client implementing stdio.
 
 ```powershell
 npm run mcp
@@ -57,7 +57,7 @@ To connect Codex on Windows, see the complete setup and tool catalog in **[docs/
 The inspector provides exact X/Y/size, colors, rotation, layer ordering and 6 alignment commands.
 Select **Анимации** in the canvas toolbar to open a basic timeline: inspect per-element tracks and edit animation delays/durations in milliseconds. Choose animation type in the properties panel.
 
-Limitations in v0.2: rotation and resizing are supported, but rotated multi-selection uses logical unrotated group bounds for alignment and resizing; no aspect-ratio lock, multi-user collaboration, image asset embedding, keyframe timeline or native Rust UI yet.
+The web studio supports ordinary editable elements, grouped transforms, embedded images and direct export. The timeline offers entrance effects and delay/duration editing; arbitrary keyframe sequences, rich-text runs and a native Rust desktop UI remain future improvements.
 
 ### Run the complete built web studio locally
 
@@ -253,11 +253,11 @@ npm run test:mcp
 npm run test:live
 ```
 
-The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions runs type checking, unit tests, browser smoke tests, MCP tool integration tests, live cross-process synchronization tests, production build and standalone export on each push to `main` and pull request.
+The browser smoke suite uses **playwright-core** with an already installed Google Chrome and does **not** download a separate browser. GitHub Actions validates the project on Linux and Windows with type checking, unit tests, browser smoke tests, MCP tool integration tests, live cross-process synchronization tests, production build and standalone export on each push to `main` and pull request.
 
 ## Stable release criteria
 
-The v0.9 release candidate supports a complete authoring workflow: create/open projects, editable slide templates, content and styling, animation/transition preview, full-screen presentation, standalone HTML and PDF export, browser autosave, undo/redo, safe project archives, and automatic synchronization with AI agents. Tests cover both development and production Node server routes.
+The v1.0 web studio supports a complete authoring workflow: create/open projects, editable slide templates, content and styling, animation/transition preview, full-screen presentation, standalone HTML and PDF export, browser autosave, undo/redo, safe project archives, and automatic synchronization with AI agents. Tests cover both development and production Node server routes.
 
 The desktop Rust application, keyframe animation editor, real-time multi-user cursors and advanced rich-text formatting are separate future roadmap items; they are **not** required for the usable web application.
 

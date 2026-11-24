@@ -184,6 +184,7 @@ function render(): void {
   if (!project.slides.some(s => s.id === slideId)) slideId = project.slides[0]?.id ?? "";
   $<HTMLInputElement>("project-title").value = project.title;
   $("slide-counter").textContent = `Слайд ${Math.max(0, project.slides.findIndex(s => s.id === slideId) + 1)} из ${project.slides.length}`;
+  $("viewport-label").textContent = `${project.viewport.width} × ${project.viewport.height} · ${(project.viewport.width / project.viewport.height).toFixed(2)}:1`;
   $<HTMLButtonElement>("undo").disabled = !store.canUndo;
   $<HTMLButtonElement>("redo").disabled = !store.canRedo;
   const list = $("slide-list");
@@ -256,7 +257,7 @@ function pick(label: string, key: string, value: string, choices: string[]): str
 }
 
 function renderProperties(): void {
-  const { slide, element } = selected();
+  const { project, slide, element } = selected();
   if (!slide) {
     props.innerHTML = '<div class="empty-note">Добавьте первый слайд.</div>';
     return;
@@ -290,6 +291,11 @@ function renderProperties(): void {
   if (!element) {
     props.innerHTML = `<div class="property-title">Слайд</div><div class="property-help">Выберите элемент на холсте, чтобы настроить его.</div>
       ${field("Название","name",slide.name)}
+      <div class="property-section">РАЗМЕР СЛАЙДА</div>
+      <div class="field-grid">
+        ${field("Ширина","viewportWidth",project.viewport.width,"number")}
+        ${field("Высота","viewportHeight",project.viewport.height,"number")}
+      </div>
       ${field("Фон (CSS)","background",slide.background)}
       ${pick("Переход","transition",slide.transition?.type ?? "fade",["none","fade","slide","zoom"])}
       ${field("Длительность, мс","transitionDuration",slide.transition?.duration ?? 450,"number")}
@@ -308,11 +314,14 @@ function renderProperties(): void {
       ${element.type === "text" ? `
         ${area("Текст","text",element.text)}
         ${field("Размер шрифта","fontSize",element.fontSize ?? 56,"number")}
+        ${field("Семейство шрифта","fontFamily",element.fontFamily ?? "Inter, system-ui, sans-serif")}
+        ${field("Межстрочный интервал","lineHeight",element.lineHeight ?? 1.2,"number")}
         ${field("Цвет","color",element.color ?? "#fff")}
         ${field("Насыщенность","fontWeight",element.fontWeight ?? 500,"number")}
         ${pick("Выравнивание","align",element.align ?? "left",["left","center","right"])}` : ""}
       ${element.type === "shape" ? `
         ${field("Заливка (CSS)","fill",element.fill)}
+        ${field("Граница (CSS)","border",element.border ?? "none")}
         ${field("Скругление","borderRadius",element.borderRadius ?? 0,"number")}` : ""}
       ${element.type === "image" ? `
         <label class="image-upload">Загрузить файл (PNG, JPG, WebP, GIF)
@@ -320,6 +329,7 @@ function renderProperties(): void {
         </label>
         ${field("URL изображения","src",element.src)}
         ${field("Подпись","alt",element.alt)}
+        ${field("Скругление","borderRadius",element.borderRadius ?? 0,"number")}
         ${pick("Вписывание","fit",element.fit ?? "cover",["cover","contain","fill"])}` : ""}
       ${element.type === "html" ? `
         <div class="code-tip">Встроенный HTML/CSS/JS изолирован в iframe. Код не запускается в редакторе.</div>
@@ -462,12 +472,15 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
   const { slide, element } = selected();
   if (!slide) return;
   const numeric = ["x","y","width","height","rotation","opacity","fontSize","fontWeight",
-    "borderRadius","animationDelay","animationDuration","transitionDuration"];
+    "borderRadius","lineHeight","viewportWidth","viewportHeight","animationDelay","animationDuration","transitionDuration"];
   let value: string | number = input.value;
   if (numeric.includes(key)) {
     value = Number(value);
     if (!Number.isFinite(value)) { render(); return; }
     if (["width","height"].includes(key)) value = Math.max(1, value);
+    if (key === "viewportWidth") value = Math.max(320, Math.min(2400, Math.round(value)));
+    if (key === "viewportHeight") value = Math.max(180, Math.min(1600, Math.round(value)));
+    if (key === "lineHeight") value = Math.max(0.5, Math.min(5, value));
     if (key === "opacity") value = Math.max(0, Math.min(1, value));
     if (["animationDelay","animationDuration","transitionDuration"].includes(key))
       value = Math.max(0, value);
@@ -477,7 +490,9 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
       store.update(project => {
         const next = structuredClone(project);
         const target = next.slides.find(s => s.id === slide.id)!;
-        if (key === "name") target.name = String(value);
+        if (key === "viewportWidth") next.viewport.width = Number(value);
+        else if (key === "viewportHeight") next.viewport.height = Number(value);
+        else if (key === "name") target.name = String(value);
         else if (key === "background") target.background = String(value);
         else if (key === "transition") target.transition = { ...target.transition, type: value as "none"|"fade"|"slide"|"zoom" };
         else if (key === "transitionDuration") target.transition = { type: target.transition?.type ?? "fade", duration: Number(value) };

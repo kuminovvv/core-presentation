@@ -109,7 +109,7 @@ function editSlide(project: Presentation, slideId: string, patch: {
 }
 
 export function createMcpServer(repo: ProjectRepository): McpServer {
-  const server = new McpServer({ name: "core-presentation", version: "0.9.0" });
+  const server = new McpServer({ name: "core-presentation", version: "1.0.0" });
 
   function add<T extends z.ZodRawShape>(
     name: string,
