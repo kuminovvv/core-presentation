@@ -159,6 +159,20 @@ try {
   check(html.includes("data:image/png;base64,"),
     "Offline export contains the uploaded embedded image");
 
+  // Native layout templates are fully editable objects.
+  await page.locator(".layout-menu summary").click();
+  await page.locator('[data-layout="two-columns"]').click();
+  await page.locator(".cp-element.cp-text").filter({ hasText: "Сравнение двух подходов" }).waitFor();
+  check(await page.locator(".cp-slide .cp-element").count() >= 5,
+    "Layout gallery inserts a native editable two-column slide");
+
+  // Slide thumbnails can be rearranged without changing their stable IDs.
+  const drag = page.locator(".slide-row").last();
+  const lastId = await drag.getAttribute("data-slide-id");
+  await drag.dragTo(page.locator(".slide-row").first(), { timeout: 10000 });
+  check(await page.locator(".slide-row").first().getAttribute("data-slide-id") === lastId,
+    "Dragging thumbnails changes slide order");
+
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

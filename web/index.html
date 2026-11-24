@@ -31,7 +31,21 @@
       </header>
       <div class="app-body">
         <aside class="sidebar">
-          <div class="panel-head"><span>СЛАЙДЫ</span><button id="add-slide" title="Добавить слайд">＋</button></div>
+          <div class="panel-head"><span>СЛАЙДЫ</span>
+            <div class="sidebar-buttons">
+              <button id="add-slide" title="Добавить пустой слайд">＋</button>
+              <details class="layout-menu">
+                <summary title="Готовые макеты слайдов">▦</summary>
+                <div class="layout-options">
+                  <button type="button" data-layout="title">Титульный</button>
+                  <button type="button" data-layout="section">Раздел</button>
+                  <button type="button" data-layout="two-columns">Две колонки</button>
+                  <button type="button" data-layout="quote">Цитата</button>
+                  <button type="button" data-layout="blank">Пустой слайд</button>
+                </div>
+              </details>
+            </div>
+          </div>
           <div id="slide-list" class="slide-list"></div>
           <div class="sidebar-bottom">OPEN FORMAT · HTML/CSS/JS</div>
         </aside>

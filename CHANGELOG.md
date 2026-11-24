@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.0] — 2026-11-24
+
+### Added
+
+- Editable starter slide gallery: title, section, two-column comparison, quote and blank.
+- Drag-and-drop slide sorting from the thumbnail sidebar.
+- Unit tests for layout geometry, ID stability, serialization and browser gesture regression.
+
+
 ## [0.6.0] — 2026-11-24
 
 ### Added

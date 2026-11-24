@@ -1,6 +1,6 @@
 import {
   PresentationPlayer, PresentationStore, addElement, addSlide, createElement, createSlide,
-  createSlideNode, deleteElement, deleteSlide, duplicateSlide, duplicateElements,
+  createSlideNode, deleteElement, deleteSlide, duplicateSlide, duplicateElements, moveSlide,
   groupElements, ungroupElements, reorderElements, updateElements,
   parsePresentation, serializePresentation, updateElement,
 } from "../src";
@@ -9,6 +9,8 @@ import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
 import { unionBounds } from "../src/editor/geometry";
 import { ProjectSync } from "./project-sync";
+import { createLayoutSlide } from "../src/editor/layouts";
+import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
 
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -152,11 +154,35 @@ function render(): void {
   project.slides.forEach((slide, index) => {
     const row = document.createElement("button");
     row.type = "button";
+    row.draggable = true;
+    row.dataset.slideId = slide.id;
     row.className = "slide-row" + (slide.id === slideId ? " active" : "");
     row.innerHTML = `<span class="slide-number">${String(index + 1).padStart(2,"0")}</span>
       <span class="slide-thumb" style="background:${escape(slide.background)}"><span>${escape(slide.name)}</span></span>
       <span class="slide-title">${escape(slide.name)}</span>`;
     row.addEventListener("click", () => { slideId = slide.id; canvas.clear(); render(); });
+    row.addEventListener("dragstart", event => {
+      event.dataTransfer?.setData("text/plain", slide.id);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => {
+      list.querySelectorAll(".dragging, .drop-target").forEach(node =>
+        node.classList.remove("dragging", "drop-target"));
+    });
+    row.addEventListener("dragover", event => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      row.classList.add("drop-target");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("drop-target"));
+    row.addEventListener("drop", event => {
+      event.preventDefault();
+      row.classList.remove("drop-target");
+      const id = event.dataTransfer?.getData("text/plain");
+      if (!id || id === slide.id || !store.value.slides.some(item => item.id === id)) return;
+      store.update(project => moveSlide(project, id, index));
+    });
     list.append(row);
   });
   stage.replaceChildren();
@@ -465,6 +491,14 @@ function closePreview(): void {
   overlay.hidden = true;
 }
 
+document.querySelectorAll<HTMLButtonElement>("[data-layout]").forEach(button =>
+  button.addEventListener("click", () => {
+    const layout = button.dataset.layout as SlideLayout;
+    const slide = createLayoutSlide(layout, store.value.viewport);
+    slideId = slide.id; canvas.clear();
+    store.update(project => addSlide(project, slide));
+    button.closest("details")?.removeAttribute("open");
+  }));
 $("add-slide").addEventListener("click", () => {
   const slide = createSlide(`Слайд ${store.value.slides.length + 1}`);
   slideId = slide.id; canvas.clear();

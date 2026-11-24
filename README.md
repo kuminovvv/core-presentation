@@ -4,7 +4,7 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v0.6 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v0.7 alpha. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
 
 ## Quick start
 
@@ -71,6 +71,10 @@ Open **http://127.0.0.1:4173/**. The server binds to localhost for safety, uses 
 npm run test:built
 ```
 
+### Native editable slide layouts
+
+The left sidebar offers a gallery of starter layouts: **Title**, **Section**, **Two columns**, **Quote**, and **Blank**. Each layout consists of ordinary editable text/shape objects and can be customized by hand or by an agent. Drag slide thumbnails to reorder slides; their IDs and element data remain intact.
+
 ### Work directly with HTML and images
 
 Double-click a text object to edit its content on the slide (Ctrl+Enter to finish, Escape to cancel). Select an image object to upload PNG/JPEG/WebP/GIF files from your computer; uploaded images are embedded as data URLs and remain usable in offline presentations.
@@ -113,6 +117,7 @@ src/
     store.ts        Undo/redo, event subscription
   editor/
     geometry.ts     Pure resize, rotate, snap and marquee functions
+    layouts.ts      Editable starter slide layouts
   server/
     project-api.ts  Reusable local project API for dev and built server
     production.ts   Node HTTP server for the compiled web app
