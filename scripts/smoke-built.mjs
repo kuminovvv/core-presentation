@@ -97,7 +97,7 @@ try {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(url);
-  await page.locator("#project-picker").selectOption("production-check");
+  await page.locator("#project-picker").selectOption("production-check", {force:true});
   await page.locator(".cp-element.cp-text").filter({ hasText: "A production build" }).waitFor();
   assert(errors.length === 0, "Built studio opens shared project in real Chrome");
   console.log("Built studio smoke test passed.");

@@ -1,3 +1,5 @@
+import { syncSelect } from "./selects";
+
 export type ThemePreference = "system" | "light" | "dark";
 const storageKey = "core-presentation:theme";
 const system = window.matchMedia("(prefers-color-scheme: dark)");
@@ -16,6 +18,7 @@ export function initTheme(): void {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#191a1c" : "#f5f5f7");
     select.value = preference;
+    syncSelect(select);
   };
   select.addEventListener("change", () => {
     preference = select.value === "dark" ? "dark" : select.value === "light" ? "light" : "system";

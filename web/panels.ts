@@ -13,8 +13,8 @@ export function initPanels(): void {
     try {
       const saved = localStorage.getItem(prefix + side);
       if (saved) {
-        const state = JSON.parse(saved) as { width?: number; collapsed?: boolean };
-        if (typeof state.width === "number" && Number.isFinite(state.width)) width = Math.max(min, Math.min(max, state.width));
+        const state = JSON.parse(saved) as { width?: number; collapsed?: boolean; version?: number };
+        if (typeof state.width === "number" && Number.isFinite(state.width) && (state.width !== (side === "slides" ? 216 : 280) || state.version === 2)) width = Math.max(min, Math.min(max, state.width));
         collapsed = state.collapsed === true;
       }
     } catch { /* optional */ }
@@ -26,7 +26,7 @@ export function initPanels(): void {
       handle.setAttribute("aria-valuenow", String(width));
     };
     const save = () => {
-      try { localStorage.setItem(prefix + side, JSON.stringify({ width, collapsed })); } catch { /* optional */ }
+      try { localStorage.setItem(prefix + side, JSON.stringify({ width, collapsed, version: 2 })); } catch { /* optional */ }
     };
     const resize = (next: number) => {
       width = Math.max(min, Math.min(max, Math.round(next)));
@@ -57,6 +57,6 @@ export function initPanels(): void {
     });
     apply();
   };
-  bind("slides", 160, 340, 216);
-  bind("inspector", 220, 420, 280);
+  bind("slides", 160, 420, 260);
+  bind("inspector", 160, 420, 260);
 }
