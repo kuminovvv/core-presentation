@@ -362,7 +362,7 @@ function renderProperties(): void {
     $("duplicate-slide").addEventListener("click", () => store.update(project => duplicateSlide(project, slide.id)));
     $("delete-slide").addEventListener("click", () => store.update(project => deleteSlide(project, slide.id)));
   } else {
-    props.innerHTML = `<div class="property-title">${escape(({ text: "Текст", shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type])}</div>
+    props.innerHTML = `<div class="property-title">${escape(({ text: "Текст", shape: "Фигура", image: "Изображение", html: "HTML / JS", frame:"Frame" } as const)[element.type])}</div>
       <div class="property-help">ID: ${escape(element.id)}</div>
       ${itemLayoutControls(slide,[element])}
       <div class="field-grid">
@@ -466,7 +466,7 @@ function renderTimeline(): void {
     row.className = "timeline-row" + (canvas.ids.includes(element.id) ? " active" : "");
     row.dataset.elementId = element.id;
     row.innerHTML = '<button type="button" class="timeline-object" title="' + escape(element.id) + '">' +
-      escape(element.type === "text" ? element.text.slice(0, 25) : ({ shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type]) + '</button>' +
+      escape(element.type === "text" ? element.text.slice(0, 25) : ({ shape: "Фигура", image: "Изображение", html: "HTML / JS", frame:"Frame" } as const)[element.type]) + '</button>' +
       '<div class="timeline-track"' + (active ? '' : ' data-empty="true" role="button" tabindex="0" aria-label="Добавить анимацию: двойной щелчок по дорожке или Enter" title="Двойной щелчок ЛКМ — добавить анимацию"') + '>' + (active
         ? '<div class="timeline-bar" tabindex="0" role="slider" aria-label="Начало анимации" aria-valuemin="0" aria-valuemax="' + range + '" aria-valuenow="' + delay + '" style="left:' + (delay / range * 100) + '%;width:' + (duration / range * 100) + '%" title="' + escape(element.animation?.type) + ' · ' + delay + '–' + (delay + duration) + ' мс"><span class="timeline-edge start" data-edge="start"></span><span class="timeline-edge end" data-edge="end"></span></div>'
         : '<span class="timeline-none">Двойной щелчок — добавить</span>') + '</div>' +

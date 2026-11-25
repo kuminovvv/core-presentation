@@ -73,10 +73,11 @@ export class PresentationPlayer {
     const transition = nextIndex < this.index ? previousSlide.transition : incomingSlide.transition;
     const kind = transition?.type ?? "fade";
     const duration = reduced() ? 0 : Math.min(10000, transition?.duration ?? 450);
-    if (old && duration > 0 && kind === "morph") {
+    const hasFrames=previousSlide.elements.some(e=>e.type==="frame")||incomingSlide.elements.some(e=>e.type==="frame");
+    if (old && duration > 0 && kind === "morph" && !hasFrames) {
       await animateMorph(previousSlide, incomingSlide, old, incoming, duration);
     } else if (old && duration > 0 && kind !== "none") {
-      const frames = this.transitionFrames(kind, nextIndex > this.index);
+      const frames = this.transitionFrames(kind==="morph"?"fade":kind, nextIndex > this.index);
       const a = old.animate(frames.out, timing(duration));
       const b = incoming.animate(frames.in, timing(duration));
       await Promise.all([a.finished.catch(() => undefined), b.finished.catch(() => undefined)]);
@@ -140,7 +141,7 @@ export class PresentationPlayer {
     for (const element of slide.elements) {
       const animation = element.animation;
       if (!animation || animation.type === "none") continue;
-      const target = Array.from(node.children).find(child =>
+      const target = Array.from(node.querySelectorAll<HTMLElement>(".cp-element")).find(child =>
         (child as HTMLElement).dataset.elementId === element.id) as HTMLElement | undefined;
       if (!target) continue;
       const frames = entranceFrames(element);

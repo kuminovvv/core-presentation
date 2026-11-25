@@ -12,7 +12,7 @@ interface Unit {
 /** A regular group is a single layout item; its internal geometry is unchanged. */
 function units(slide: Slide): Unit[] {
   const items = new Map<string, SlideElement[]>();
-  for (const e of slide.elements) {
+  for (const e of slide.elements.filter(e=>!e.parentId)) {
     const key = e.groupId ? "g:" + e.groupId : "e:" + e.id;
     const group = items.get(key);
     if (group) group.push(e);
@@ -26,7 +26,7 @@ function units(slide: Slide): Unit[] {
   });
 }
 export function isFlowElement(slide: Slide, element: SlideElement): boolean {
-  return Boolean(slide.layout && element.layoutPosition !== "absolute" &&
+  return Boolean(!element.parentId && slide.layout && element.layoutPosition !== "absolute" &&
     (!element.groupId || !slide.elements.some(e => e.groupId === element.groupId && e.layoutPosition === "absolute")));
 }
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -34,7 +34,7 @@ function alignment(free: number, value: "start" | "center" | "end" | "space-betw
   return value === "center" ? Math.max(0, free) / 2 : value === "end" ? Math.max(0, free) : 0;
 }
 /** Deterministic, fixed-size flex-like layout, independent of browser or font metrics. */
-export function resolveSlideLayout(slide: Slide, viewport: Viewport): Slide {
+function resolveFlat(slide: Slide, viewport: Viewport): Slide {
   const layout = slide.layout;
   if (!layout) return slide;
   const flow = units(slide);
@@ -60,8 +60,28 @@ export function resolveSlideLayout(slide: Slide, viewport: Viewport): Slide {
   }
   return { ...slide, elements: slide.elements.map(e => positions.has(e.id) ? { ...e, ...positions.get(e.id)! } : e) };
 }
+export function resolveSlideLayout(slide:Slide,viewport:Viewport):Slide{
+  if(!slide.elements.some(e=>e.type==="frame"))return resolveFlat(slide,viewport);
+  const elements=slide.elements.map(e=>({...e}));
+  const children=(id?:string)=>elements.filter(e=>e.parentId===id);
+  function move(e:SlideElement,dx:number,dy:number){
+    e.x=round(e.x+dx);e.y=round(e.y+dy);
+    if(e.type==="frame")for(const child of children(e.id))move(child,dx,dy);
+  }
+  function arrange(parent?:Extract<SlideElement,{type:"frame"}>){
+    const list=children(parent?.id),layout=parent?parent.layout:slide.layout;
+    if(layout){
+      const x=parent?.x??0,y=parent?.y??0;
+      const local=list.map(e=>({...e,parentId:undefined,x:e.x-x,y:e.y-y}));
+      const result=resolveFlat({...slide,layout,elements:local},parent?{width:parent.width,height:parent.height}:viewport);
+      result.elements.forEach((e,i)=>{const target=list[i]!;move(target,e.x+x-target.x,e.y+y-target.y);});
+    }
+    for(const e of list)if(e.type==="frame")arrange(e);
+  }
+  arrange();return {...slide,elements};
+}
 export function reflowPresentation(project: Presentation): Presentation {
-  if (!project.slides.some(s => s.layout)) return project;
+  if (!project.slides.some(s => s.layout || s.elements.some(e=>e.type==="frame"))) return project;
   return { ...project, slides: project.slides.map(s => resolveSlideLayout(s, project.viewport)) };
 }
 export function layoutOverflows(slide: Slide, viewport: Viewport): boolean {

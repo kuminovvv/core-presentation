@@ -72,7 +72,7 @@ export function validatePresentation(input: unknown): asserts input is Presentat
         }
         if (element.type === "text" && element.fontStyle !== undefined && !oneOf(element.fontStyle, ["normal","italic"])) fail(p + ".fontStyle", "unknown font style");
         if (element.type === "shape" && element.boxShadow !== undefined && !str(element.boxShadow)) fail(p + ".boxShadow", "must be a CSS string");
-        if (!oneOf(element.type, ["text","shape","image","html"])) {
+        if (!oneOf(element.type, ["text","shape","image","html","frame"])) {
           fail(p + ".type", "unknown element"); return;
         }
         for (const key of ["x","y","width","height"]) {
@@ -83,6 +83,14 @@ export function validatePresentation(input: unknown): asserts input is Presentat
         for (const key of ["rotation","opacity","zIndex"]) {
           if (element[key] !== undefined && !num(element[key]))
             fail(p + "." + key, "must be finite");
+        }
+        if (element.parentId !== undefined && (!str(element.parentId)||!element.parentId.trim())) fail(p+".parentId","required frame ID");
+        if(element.type==="frame"){
+          if(element.rotation!==undefined&&element.rotation!==0)fail(p+".rotation","frame rotation is not supported");
+          if(element.clipContent!==undefined&&typeof element.clipContent!=="boolean")fail(p+".clipContent","must be boolean");
+          for(const key of ["name","fill","border","boxShadow"])if(element[key]!==undefined&&!str(element[key]))fail(p+"."+key,"must be string");
+          if(element.borderRadius!==undefined&&(!num(element.borderRadius)||element.borderRadius<0))fail(p+".borderRadius","must be non-negative");
+          if(element.layout!==undefined){const l=element.layout;if(!obj(l)||!oneOf(l.direction,["row","column"])||!oneOf(l.align,["start","center","end"])||!oneOf(l.justify,["start","center","end","space-between"]))fail(p+".layout","invalid frame layout");else for(const k of ["gap","paddingX","paddingY"])if(!num(l[k])||(l[k] as number)<0||(l[k] as number)>10000)fail(p+".layout."+k,"invalid spacing");}
         }
         if (element.layoutPosition !== undefined && !oneOf(element.layoutPosition, ["flow","absolute"])) fail(p + ".layoutPosition", "unknown positioning mode");
         if (element.groupId !== undefined && (!str(element.groupId) || !element.groupId.trim()))
@@ -101,6 +109,15 @@ export function validatePresentation(input: unknown): asserts input is Presentat
           }
         }
       });
+      const byId=new Map(slide.elements.filter(obj).map(e=>[e.id,e]));
+      for(const e of slide.elements.filter(obj)){
+        let parent=e.parentId;const seen=new Set([e.id]);let depth=0;
+        while(parent!==undefined){
+          const frame=byId.get(parent);
+          if(!frame||frame.type!=="frame"||seen.has(parent)||++depth>32){fail(path+".elements","invalid frame ancestry (missing frame, cycle or depth > 32)");break;}
+          seen.add(parent);parent=frame.parentId;
+        }
+      }
     });
   }
   if (errors.length) throw new PresentationValidationError(errors);

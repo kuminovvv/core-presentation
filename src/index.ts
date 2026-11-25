@@ -1,6 +1,6 @@
 export type {
   Presentation, Slide, SlideElement, ElementKind, TextElement,
-  ShapeElement, ImageElement, HtmlElement, Transition, Entrance, SlideLayout as AutoLayout,
+  ShapeElement, ImageElement, HtmlElement, FrameElement, Transition, Entrance, SlideLayout as AutoLayout,
 } from "./core/types";
 export { validatePresentation, parsePresentation, serializePresentation, PresentationValidationError } from "./core/validation";
 export {
@@ -16,3 +16,4 @@ export type { Bounds, Handle, Guide, GeometryPatch } from "./editor/geometry";
 export { createElementNode, createSlideNode } from "./renderer/dom";
 export { PresentationPlayer } from "./renderer/player";
 export { defaultSlideLayout, resolveSlideLayout, reflowPresentation, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "./core/auto-layout";
+export { descendants, rootSelection, insertFrame, containingFrame } from "./core/frames";

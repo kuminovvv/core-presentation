@@ -39,6 +39,8 @@ const slideLayout = z.strictObject({
 });
 const patchSchema = z.strictObject({
   layoutPosition: z.enum(["flow", "absolute"]).optional(),
+  parentId: id.optional(),
+  name:z.string().max(250).optional(),clipContent:z.boolean().optional(),layout:slideLayout.optional(),
   x: position.optional(), y: position.optional(),
   width: dimension.optional(), height: dimension.optional(),
   rotation: z.number().finite().min(-36000).max(36000).optional(),
@@ -70,11 +72,12 @@ type Patch = z.infer<typeof patchSchema>;
 const elementTypes: Record<SlideElement["type"], Set<string>> = {
   text: new Set(["text", "fontFamily", "fontSize", "fontWeight", "lineHeight", "align", "color", "fontStyle"]),
   shape: new Set(["fill", "border", "borderRadius", "boxShadow"]),
+  frame: new Set(["name","fill","border","borderRadius","boxShadow","clipContent","layout"]),
   image: new Set(["src", "alt", "fit", "borderRadius"]),
   html: new Set(["html", "css", "javascript"]),
 };
 const universalProperties = new Set([
-  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId", "layoutPosition",
+  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId", "layoutPosition", "parentId",
 ]);
 
 function validatePatch(element: SlideElement, patch: Patch): void {
@@ -186,7 +189,7 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
           index,
           elements: includeElements ? slide.elements : slide.elements.map(element =>
             ({ id: element.id, type: element.type, x: element.x, y: element.y,
-               width: element.width, height: element.height, groupId: element.groupId, layoutPosition: element.layoutPosition })),
+               width: element.width, height: element.height, groupId: element.groupId, parentId:element.parentId, layoutPosition: element.layoutPosition })),
         })),
       };
     });
@@ -275,7 +278,7 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
   add("presentation_add_element",
     "Add a text, shape, image or sandboxed HTML/CSS/JS element to a slide. Geometry is in slide pixels.",
     z.object({ ...projectField, slideId: id,
-      type: z.enum(["text", "shape", "image", "html"]),
+      type: z.enum(["text", "shape", "image", "html", "frame"]),
       properties: patchSchema,
     }),
     async ({ project, expectedRevision, slideId, type, properties }) => {

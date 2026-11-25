@@ -1,6 +1,7 @@
 import type { ElementKind, Presentation, Slide, SlideElement } from "./types";
 import { validatePresentation } from "./validation";
 import { reflowPresentation } from "./auto-layout";
+import { descendants, translateFrameChildren } from "./frames";
 
 export function newId(prefix = "item"): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -19,6 +20,8 @@ export function createSlide(name = "New slide"): Slide {
 export function createElement(type: ElementKind): SlideElement {
   const base = { id: newId("element"), x: 120, y: 120, width: 440, height: 130 };
   switch (type) {
+    case "frame":
+      return {...base,type,name:"Frame",width:320,height:240,fill:"#ffffff",clipContent:true,borderRadius:0};
     case "text":
       return { ...base, type, text: "Your text", color: "#ffffff", fontSize: 64, fontWeight: 600 };
     case "shape":
@@ -61,7 +64,8 @@ export function duplicateSlide(project: Presentation, slideId: string): Presenta
   const copy = structuredClone(project.slides[index]!);
   copy.id = newId("slide");
   copy.name += " copy";
-  copy.elements.forEach(e => e.id = newId("element"));
+  const ids = new Map(copy.elements.map(e=>[e.id,newId("element")]));
+  copy.elements.forEach(e=>{e.id=ids.get(e.id)!;if(e.parentId)e.parentId=ids.get(e.parentId);});
   return addSlide(project, copy, index + 1);
 }
 
@@ -82,6 +86,7 @@ export function updateElement(project: Presentation, elementId: string, patch: P
   if (patch.type && patch.type !== element.type) throw new Error("Changing element types is not supported");
   Object.assign(element, patch);
   validatePresentation(next);
+  translateFrameChildren(project,next,{[elementId]:patch});
   return reflowPresentation(next);
 }
 
@@ -100,6 +105,7 @@ export function updateElements(
     Object.assign(element, patch);
   }
   validatePresentation(next);
+  translateFrameChildren(project,next,patches);
   return reflowPresentation(next);
 }
 
@@ -109,6 +115,7 @@ export function groupElements(project: Presentation, slideId: string, ids: strin
   const chosen = new Set(ids);
   if (!slide || chosen.size < 2 || slide.elements.filter(e => chosen.has(e.id)).length !== chosen.size)
     throw new Error("Select at least two elements on the same slide");
+  if(new Set(slide.elements.filter(e=>chosen.has(e.id)).map(e=>e.parentId)).size>1)throw Error("Group items must share a frame");
   const groupId = newId("group");
   const patches: Record<string, Partial<SlideElement>> = {};
   for (const id of ids) patches[id] = { groupId };
@@ -152,12 +159,14 @@ export function duplicateElements(
   const next = structuredClone(project);
   const slide = next.slides.find(s => s.id === slideId);
   if (!slide) throw new Error(`Slide not found: ${slideId}`);
-  const selected = new Set(ids);
+  const selected = descendants(slide,ids);
   const copies = slide.elements.filter(e => selected.has(e.id)).map(e => structuredClone(e));
   if (copies.length !== selected.size) throw new Error("Elements must belong to the same slide");
   const groups = new Map<string, string>();
+  const idMap = new Map(copies.map(e=>[e.id,newId("element")]));
   for (const copy of copies) {
-    copy.id = newId("element");
+    copy.id = idMap.get(copy.id)!;
+    if(copy.parentId&&idMap.has(copy.parentId))copy.parentId=idMap.get(copy.parentId);
     delete copy.morphId; // Copies on the same slide must not share a morph identity.
     copy.x += offset;
     copy.y += offset;
@@ -175,6 +184,7 @@ export function deleteElement(project: Presentation, elementId: string): Present
   const next = structuredClone(project);
   const slide = next.slides.find(s => s.elements.some(e => e.id === elementId));
   if (!slide) throw new Error(`Element not found: ${elementId}`);
-  slide.elements = slide.elements.filter(e => e.id !== elementId);
+  const removed=descendants(slide,[elementId]);
+  slide.elements = slide.elements.filter(e => !removed.has(e.id));
   return reflowPresentation(next);
 }

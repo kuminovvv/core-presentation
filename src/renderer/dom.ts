@@ -41,6 +41,10 @@ export function createElementNode(element: SlideElement, interactive = true): HT
         lineHeight: String(element.lineHeight ?? 1.2),
       });
       break;
+    case "frame":
+      wrapper.classList.add("cp-frame");
+      Object.assign(wrapper.style,{background:element.fill??"transparent",borderRadius:`${element.borderRadius??0}px`,boxShadow:element.boxShadow??"none",outline:element.border??"none",outlineOffset:"-1px",overflow:element.clipContent?"hidden":"visible"});
+      break;
     case "shape":
       Object.assign(wrapper.style, {
         background: element.fill ?? "#767cff",
@@ -88,6 +92,13 @@ export function createSlideNode(slide: Slide, project: Presentation, interactive
     overflow: "hidden",
     background: slide.background,
   });
-  for (const element of slide.elements) layer.append(createElementNode(element, interactive));
+  const nodes=new Map(slide.elements.map(e=>[e.id,createElementNode(e,interactive)]));
+  const items=new Map(slide.elements.map(e=>[e.id,e]));
+  for(const e of slide.elements){
+    const node=nodes.get(e.id)!;
+    const parent=e.parentId?items.get(e.parentId):undefined;
+    if(parent){node.style.left=(e.x-parent.x)+"px";node.style.top=(e.y-parent.y)+"px";nodes.get(parent.id)!.append(node);}
+    else layer.append(node);
+  }
   return layer;
 }

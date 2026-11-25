@@ -1,5 +1,5 @@
 /** Format v1. Geometry is measured in slide pixels. */
-export type ElementKind = "text" | "shape" | "image" | "html";
+export type ElementKind = "text" | "shape" | "image" | "html" | "frame";
 export type TransitionKind = "none" | "fade" | "slide" | "zoom" | "morph";
 export type EntranceKind = "none" | "fade" | "slide-up" | "zoom";
 export type Entrance = { type: EntranceKind; duration?: number; delay?: number };
@@ -20,6 +20,7 @@ export interface ElementBase {
   rotation?: number; opacity?: number; zIndex?: number; animation?: Entrance;
   /** Elements sharing a groupId can be selected and transformed together. */
   groupId?: string;
+  parentId?: string; // Coordinates remain slide-relative.
   /** Absolute objects are not positioned by slide Auto Layout. */
   layoutPosition?: "flow" | "absolute";
   /** Stable visual identity across slides; unique within each slide. */
@@ -41,7 +42,11 @@ export interface ImageElement extends ElementBase {
 export interface HtmlElement extends ElementBase {
   type: "html"; html: string; css?: string; javascript?: string;
 }
-export type SlideElement = TextElement | ShapeElement | ImageElement | HtmlElement;
+export interface FrameElement extends ElementBase {
+  type: "frame"; name?: string; fill?: string; border?: string; borderRadius?: number; boxShadow?: string;
+  clipContent?: boolean; layout?: SlideLayout;
+}
+export type SlideElement = TextElement | ShapeElement | ImageElement | HtmlElement | FrameElement;
 export interface Slide {
   id: string; name: string; background: string;
   transition?: Transition; elements: SlideElement[]; notes?: string;
