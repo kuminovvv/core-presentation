@@ -22,7 +22,7 @@ export function insertFrame(project:Presentation,slideId:string,frame:FrameEleme
   if(!slide)throw Error("Slide not found");
   const roots=ids?rootSelection(slide,ids):undefined;
   const parent=containingFrame(slide,frame,descendants(slide,roots??[]));
-  frame={...frame,parentId:parent?.id};
+  frame={...frame,parentId:roots?.length?slide.elements.find(e=>e.id===roots[0])?.parentId:parent?.id};
   const adopt=new Set(roots??slide.elements.filter(e=>e.parentId===frame.parentId&&contains(frame,e)).map(e=>e.id));
   const incomplete=new Set(slide.elements.filter(e=>e.groupId&&!adopt.has(e.id)).map(e=>e.groupId));
   for(const e of slide.elements)if(adopt.has(e.id)&&!incomplete.has(e.groupId)){e.parentId=frame.id;}
@@ -68,18 +68,35 @@ export function reorderFrameChild(project:Presentation,slideId:string,elementId:
   ordered.splice(index,0,item);slide.elements=ordered;return next;
 }
 
-export function pickFrameLayer(slide:Slide,id:string,selected:readonly string[],deep=false):string{
+export function pickFrameLayer(slide:Slide,id:string,selected:readonly string[],deep=false,enter=false):string{
   if(deep)return id;
   const chain:string[]=[id],byId=new Map(slide.elements.map(e=>[e.id,e]));
   let parent=byId.get(id)?.parentId;
   while(parent&&byId.has(parent)&&!chain.includes(parent)){chain.unshift(parent);parent=byId.get(parent)?.parentId;}
-  for(let i=chain.length-2;i>=0;i--)if(selected.includes(chain[i]!))return chain[i+1]!;
+  for(let i=chain.length-2;i>=0;i--)if(selected.includes(chain[i]!))return chain[enter?i+1:i]!;
   for(const current of selected){const scope=byId.get(current)?.parentId;const i=scope?chain.indexOf(scope):-1;if(i>=0&&i<chain.length-1)return chain[i+1]!;}
-  return chain[0]!;
+  return chain[enter?Math.min(1,chain.length-1):0]!;
 }
 export function frameAtPoint(slide:Slide,point:{x:number;y:number},exclude:ReadonlySet<string>=new Set()):FrameElement|undefined{
   const candidates=slide.elements.filter((e):e is FrameElement=>e.type==="frame"&&!exclude.has(e.id)&&point.x>=e.x&&point.x<=e.x+e.width&&point.y>=e.y&&point.y<=e.y+e.height);
   const byId=new Map(slide.elements.map(e=>[e.id,e]));
   const depth=(e:SlideElement)=>{let n=0,p=e.parentId;while(p&&n<32){n++;p=byId.get(p)?.parentId;}return n;};
   return candidates.sort((a,b)=>(b.zIndex??0)-(a.zIndex??0)||depth(b)-depth(a)||slide.elements.indexOf(b)-slide.elements.indexOf(a))[0];
+}
+
+export function inferFrameLayout(frame:FrameElement,items:SlideElement[]):import("./types").SlideLayout{
+  const children=items.filter(e=>e.parentId===frame.id&&e.layoutPosition!=="absolute");
+  const x=children.length?Math.min(...children.map(e=>e.x)):frame.x+16;
+  const y=children.length?Math.min(...children.map(e=>e.y)):frame.y+16;
+  const maxX=children.length?Math.max(...children.map(e=>e.x+e.width)):frame.x+frame.width-16;
+  const maxY=children.length?Math.max(...children.map(e=>e.y+e.height)):frame.y+frame.height-16;
+  const cx=children.map(e=>e.x+e.width/2),cy=children.map(e=>e.y+e.height/2);
+  const dx=children.length>1?Math.max(...cx)-Math.min(...cx):0,dy=children.length>1?Math.max(...cy)-Math.min(...cy):0;
+  const direction=dx>dy?"row":"column";
+  const sorted=[...children].sort((a,b)=>direction==="row"?a.x-b.x:a.y-b.y);
+  const gaps=sorted.slice(1).map((e,i)=>Math.max(0,direction==="row"?e.x-sorted[i]!.x-sorted[i]!.width:e.y-sorted[i]!.y-sorted[i]!.height)).sort((a,b)=>a-b);
+  const clamp=(n:number)=>Math.min(10000,Math.max(0,Math.round(n)));
+  const left=clamp(x-frame.x),right=clamp(frame.x+frame.width-maxX),top=clamp(y-frame.y),bottom=clamp(frame.y+frame.height-maxY);
+  return {direction,gap:gaps.length?clamp(gaps[Math.floor(gaps.length/2)]!):16,paddingX:left,paddingY:top,
+    ...(left!==right?{paddingLeft:left,paddingRight:right}:{}),...(top!==bottom?{paddingTop:top,paddingBottom:bottom}:{}),align:"start",justify:"start"};
 }

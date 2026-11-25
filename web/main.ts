@@ -6,8 +6,8 @@ import {
 } from "../src";
 import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout, FrameElement } from "../src";
 import { initFrameTool } from "./frame-tool";
-import { insertFrame, frameAtPoint, descendants, rootSelection, parentLayout, isManaged, reorderFrameChild } from "../src/core/frames";
-import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "../src";
+import { insertFrame, frameAtPoint, descendants, rootSelection, parentLayout, isManaged, reorderFrameChild, pickFrameLayer, inferFrameLayout } from "../src/core/frames";
+import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder, resolveSlideLayout } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
 import { unionBounds } from "../src/editor/geometry";
@@ -363,6 +363,7 @@ function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
 }
 function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
   const layoutSlide:Slide={...slide,layout:e.layout,elements:slide.elements.filter(child=>child.parentId===e.id).map(child=>({...child,parentId:undefined,x:child.x-e.x,y:child.y-e.y}))};
+  const parent=slide.elements.find(item=>item.id===e.parentId);
   const pair=(a:string,b:string)=>'<div class="field-grid">'+a+b+'</div>';
   const n=(label:string,key:string,value:number,aria=label)=>'<label class="frame-number" title="'+aria+'"><span>'+label+'</span><input type="number" data-field="'+key+'" aria-label="'+aria+'" value="'+value+'"></label>';
   const section=(title:string,body:string)=>'<section class="frame-section"><h3>'+title+'</h3>'+body+'</section>';
@@ -371,7 +372,7 @@ function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
     '<div class="frame-heading"><strong>Frame</strong><div class="icon-segment">'+iconButton("source-code","Код слайда","code")+iconButton("frame-layout-toggle","Auto Layout","column",!!e.layout)+'</div></div>'+
     section("Положение",'<span class="frame-label">Выравнивание</span><div class="icon-segment alignment-tools">'+
       [["left","По левому краю","left"],["center-x","По центру горизонтально","centerX"],["right","По правому краю","right"],["top","По верхнему краю","top"],["center-y","По центру вертикально","centerY"],["bottom","По нижнему краю","bottom"]].map(([key,label,icon])=>iconButton("frame-align-"+key,label!,icon!)).join("")+'</div>'+
-      field("Название","name",e.name??"Frame")+pair(n("X","x",e.x),n("Y","y",e.y)))+
+      field("Название","name",e.name??"Frame")+pair(n("X","x",e.x-(parent?.x??0)),n("Y","y",e.y-(parent?.y??0))))+
     itemLayoutControls(slide,[e])+
     section(e.layout?"Auto Layout":"Layout",layoutControls(layoutSlide,{...project,viewport:{width:e.width,height:e.height}},'<span class="layout-label">Dimensions</span>'+pair(sizeControl(e,"X",isManaged(slide,e)),sizeControl(e,"Y",isManaged(slide,e))))+
       '<label class="frame-check"><input type="checkbox" data-field="clipContent" '+(e.clipContent?'checked':'')+'> Обрезать содержимое</label>')+
@@ -400,11 +401,16 @@ function renderLayers(){
   }
   append();
 }
-function makeFrame(rect:{x:number;y:number;width:number;height:number},ids?:string[]){
+function makeFrame(rect:{x:number;y:number;width:number;height:number},ids?:string[],auto=false){
   const {slide}=selected();if(!slide)return;
   const frame={...createElement("frame"),...rect} as FrameElement;
   if(ids?.length)frame.fill="transparent";
-  store.update(project=>insertFrame(project,slide.id,frame,ids));
+  store.update(project=>{
+    const next=insertFrame(project,slide.id,frame,ids);
+    if(auto){const s=next.slides.find(s=>s.id===slide.id)!;const f=s.elements.find(e=>e.id===frame.id) as FrameElement;f.layout=inferFrameLayout(f,s.elements);f.sizingX=f.sizingY="hug";
+      const children=s.elements.filter(e=>e.parentId===f.id).sort((a,b)=>f.layout!.direction==="row"?a.x-b.x:a.y-b.y);let i=0;s.elements=s.elements.map(e=>e.parentId===f.id?children[i++]!:e);}
+    return next;
+  });
   canvas.select([frame.id]);
 }
 
@@ -459,7 +465,7 @@ function renderProperties(): void {
       <div class="property-help">ID: ${escape(element.id)}</div>
       ${itemLayoutControls(slide,[element])}
       <div class="field-grid">
-        ${field("X","x",element.x,"number")}${field("Y","y",element.y,"number")}
+        ${field("X","x",element.x-(slide.elements.find(e=>e.id===element.parentId)?.x??0),"number")}${field("Y","y",element.y-(slide.elements.find(e=>e.id===element.parentId)?.y??0),"number")}
         ${field("Ширина","width",element.width,"number")}${field("Высота","height",element.height,"number")}
         ${field("Поворот","rotation",element.rotation ?? 0,"number")}
         ${field("Прозрачность","opacity",element.opacity ?? 1,"number")}
@@ -628,12 +634,26 @@ function runAction(action: string): void {
     const patch:Partial<FrameElement>=axis==="left"?{x:box.x}:axis==="right"?{x:box.x+box.width-frame.width}:axis==="center-x"?{x:box.x+(box.width-frame.width)/2}:axis==="top"?{y:box.y}:axis==="bottom"?{y:box.y+box.height-frame.height}:{y:box.y+(box.height-frame.height)/2};
     store.update(p=>updateElement(p,frame.id,patch));return;
   }
-  if(action==="frame-layout-toggle"){if(frame)store.update(p=>updateElement(p,frame.id,{layout:frame.layout?undefined:{...defaultSlideLayout,paddingX:16,paddingY:16}}));return;}
+  if(action==="frame-layout-toggle")action=frame?.layout?"remove-auto-layout":"add-auto-layout";
+  if(action==="add-auto-layout"){
+    if(frame){if(!frame.layout)store.update(p=>updateElement(p,frame.id,{layout:inferFrameLayout(frame,slide.elements)}));}
+    else if(canvas.ids.length){const chosen=slide.elements.filter(e=>rootSelection(slide,canvas.ids).includes(e.id));if(chosen.length&&new Set(chosen.map(e=>e.parentId)).size===1)makeFrame(unionBounds(chosen),chosen.map(e=>e.id),true);}
+    else if(!slide.layout)runAction("layout-direction-column");
+    return;
+  }
+  if(action==="remove-auto-layout"){
+    if(frame?.layout||(!canvas.ids.length&&slide.layout))runAction("layout-direction-free");return;
+  }
   if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||["layout-space-between","layout-wrap","layout-padding-individual"].includes(action)){
     store.update(project=>{
       const target=frame?project.slides.find(s=>s.id===slide.id)!.elements.find(e=>e.id===frame.id) as FrameElement:project.slides.find(s=>s.id===slide.id)!;
       if(action.startsWith("layout-direction-")){
         const direction=action.slice("layout-direction-".length);
+        if(direction==="free"){
+          const s=project.slides.find(s=>s.id===slide.id)!;
+          if(frame){const f=target as FrameElement;if(f.sizingX==="hug")f.sizingX="fixed";if(f.sizingY==="hug")f.sizingY="fixed";}
+          for(const e of s.elements.filter(e=>e.parentId===frame?.id)){if(e.sizingX==="fill")e.sizingX="fixed";if(e.sizingY==="fill")e.sizingY="fixed";}
+        }
         target.layout=direction==="free"?undefined:{...defaultSlideLayout,...(frame?{paddingX:16,paddingY:16}:{}),...target.layout,direction:(direction==="grid"?"row":direction) as AutoLayout["direction"],gridColumns:direction==="grid"?target.layout?.gridColumns??2:undefined,wrap:direction==="row"?target.layout?.wrap:undefined};
       }else if(target.layout){
         if(action==="layout-wrap")target.layout.wrap=!target.layout.wrap;
@@ -729,6 +749,7 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
     value = Number(value);
     if (!Number.isFinite(value)) { render(); return; }
     if (["width","height"].includes(key)) value = Math.max(1, value);
+    if(element?.parentId&&(key==="x"||key==="y"))value+=slide.elements.find(e=>e.id===element.parentId)?.[key]??0;
     if (key === "viewportWidth") value = Math.max(320, Math.min(2400, Math.round(value)));
     if (key === "viewportHeight") value = Math.max(180, Math.min(1600, Math.round(value)));
     if (key === "lineHeight") value = Math.max(0.5, Math.min(5, value));
@@ -934,30 +955,45 @@ $("export-html").addEventListener("click", async () => {
 });
 
 stage.addEventListener("dblclick", event => {
-  const node = (event.target as HTMLElement).closest<HTMLElement>(".cp-element.cp-text");
-  if (!node?.dataset.elementId || node.isContentEditable) return;
-  const id = node.dataset.elementId;
+  const hit = (event.target as HTMLElement).closest<HTMLElement>(".cp-element[data-element-id]");
+  const current=selected().slide;
+  if(!hit?.dataset.elementId||!current||hit.isContentEditable)return;
+  const id=pickFrameLayer(current,hit.dataset.elementId,canvas.ids,event.ctrlKey||event.metaKey,true);
+  canvas.select([id]);
+  if(id!==hit.dataset.elementId||!hit.classList.contains("cp-text"))return;
+  const node=hit;
   const source = store.value.slides.flatMap(slide => slide.elements)
     .find(item => item.id === id);
   if (!source || source.type !== "text") return;
-  canvas.select([id]);
   const original = source.text;
   node.contentEditable = "true";
   node.spellcheck = true;
   node.style.cursor = "text";
   node.focus();
   let closed = false;
+  const previewGeometry=()=>{
+    if(closed||!current)return;
+    const text=node.innerText,updated={...source,text,textAdvances:captureTextAdvances({...source,text})};
+    const laidOut=resolveSlideLayout({...current,elements:current.elements.map(e=>e.id===id?updated:e)},store.value.viewport);
+    const byId=new Map(laidOut.elements.map(e=>[e.id,e]));
+    stage.querySelectorAll<HTMLElement>(".cp-element[data-element-id]").forEach(n=>{
+      const e=byId.get(n.dataset.elementId!);if(!e)return;const parent=e.parentId?byId.get(e.parentId):undefined;
+      Object.assign(n.style,{left:(e.x-(parent?.x??0))+"px",top:(e.y-(parent?.y??0))+"px",width:e.width+"px",height:e.height+"px"});
+    });
+    const e=byId.get(id),box=stage.querySelector<HTMLElement>(".selection-box");if(e&&box)Object.assign(box.style,{left:e.x+"px",top:e.y+"px",width:e.width+"px",height:e.height+"px"});
+  };
+  node.addEventListener("input",previewGeometry);
   const finish = (save: boolean) => {
     if (closed) return;
     closed = true;
     const value = node.innerText;
     node.removeAttribute("contenteditable");
     node.style.cursor = "";
-    if (!save) { node.textContent = original; return; }
+    if (!save) { node.textContent = original; render(); return; }
     if (value !== original) {
       try { store.update(project => updateElement(project, id, { text: value,textAdvances:captureTextAdvances({...source,text:value}) })); }
-      catch (error) { alert(error instanceof Error ? error.message : String(error)); }
-    }
+      catch (error) { alert(error instanceof Error ? error.message : String(error)); render(); }
+    }else render();
   };
   node.addEventListener("blur", () => finish(true), { once: true });
   node.addEventListener("keydown", key => {
@@ -986,9 +1022,10 @@ document.addEventListener("fullscreenchange", () => {
 
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
-  if ($<HTMLDialogElement>("slide-source-dialog").open || (event.target as HTMLElement)?.closest(".studio-context-menu")) return;
+  const target=event.target instanceof Element?event.target:null;
+  if ($<HTMLDialogElement>("slide-source-dialog").open || target?.closest(".studio-context-menu")) return;
   if (event.key === "Escape" && player) { closePreview(); return; }
-  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, .timeline-track[data-empty], [role=separator], [contenteditable='true']"));
+  const typing = Boolean(target?.closest("input, textarea, select, .studio-select, .timeline-bar, .timeline-track[data-empty], [role=separator], [contenteditable='true']"));
   if (typing || player) return;
   const command = event.ctrlKey || event.metaKey;
   if(event.isComposing||event.getModifierState("AltGraph"))return;
@@ -1006,7 +1043,7 @@ window.addEventListener("keydown", event => {
   } else if(!command&&!event.altKey&&key==="f"){event.preventDefault();frameTool.activate();
   } else if(command&&event.altKey&&key==="g"){event.preventDefault();runAction("frame-selection");
   } else if (event.shiftKey && key === "a" && !command) {
-    event.preventDefault(); if(selected().element?.type==="frame")runAction("layout-direction-column");else if(canvas.ids.length){runAction("frame-selection");if(selected().element?.type==="frame")runAction("layout-direction-column");}else runAction("layout-direction-column");
+    event.preventDefault(); runAction(event.altKey?"remove-auto-layout":"add-auto-layout");
   } else if (command && key === "g" && canvas.ids.length) {
     event.preventDefault(); runAction(event.shiftKey ? "ungroup" : "group");
   } else if (command && key === "d" && canvas.ids.length) {
@@ -1057,6 +1094,7 @@ function openObjectMenu(x:number,y:number){
   if(elements.length){
     groups.push([
       {action:"frame-selection",label:"Frame из выделения",icon:"free",shortcut:"Ctrl+Alt+G"},
+      {action:elements.length===1&&elements[0]?.type==="frame"&&elements[0].layout?"remove-auto-layout":"add-auto-layout",label:elements.length===1&&elements[0]?.type==="frame"&&elements[0].layout?"Убрать Auto Layout":"Добавить Auto Layout",icon:"column",shortcut:elements.length===1&&elements[0]?.type==="frame"&&elements[0].layout?"Shift+Alt+A":"Shift+A"},
       {action:"group",label:"Сгруппировать",icon:"group",shortcut:"Ctrl+G",disabled:elements.length<2},
       {action:"ungroup",label:"Разгруппировать",icon:"group",shortcut:"Ctrl+Shift+G",disabled:!grouped},
       {action:"duplicate",label:"Дублировать",icon:"copy",shortcut:"Ctrl+D"},

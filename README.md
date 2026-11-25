@@ -18,6 +18,10 @@ Right-click an object on the canvas or use the inspector's three-dot menu for gr
 
 Press F or click Frame and drag on the canvas; click for a default-size frame. Ctrl+Alt+G wraps selected siblings in a transparent frame. Frames contain real nested elements and can have their own horizontal/vertical Auto Layout, fixed dimensions, clip content, fill, stroke and shadow. Add elements while a frame is selected or drag a single object fully inside a frame to nest it. Use the Layers list to select a frame or child. Frame coordinates in JSON remain slide-relative; parentId records hierarchy. Frame rotation, wrap/grid, Hug/Fill sizing and morph between frame-containing slides are not yet supported (such slides use fade instead).
 
+## Keyboard and text
+
+Shortcuts use physical key codes independent of the current keyboard layout. Double-click enters a frame hierarchy; Ctrl/Cmd-click selects a deep child; Enter selects a direct child and Escape returns to its parent. Shift+A infers layout from selected objects, Shift+Alt+A removes it. Drop targets use the pointer, not full containment. New text uses Auto width by default; Auto height and Fixed size are available in Resizing. Browser-measured glyph advances are retained in the document with approximate fallback for unmeasured characters. Complex shaping and exact typography metrics are not identical to Figma.
+
 ## Layout controls
 
 Flow includes freeform, vertical, horizontal and a fixed-column grid. Horizontal flow supports wrap. Auto gap distributes available space instead of adding the manual gap; individual side padding is optional. Frame Hug uses the measured bounds of fixed-size children, and Fill allocates remaining space in a managed parent. Grid uses content-sized tracks, not Figma's full track editor. Text intrinsic measurement, min/max constraints and full Figma sizing-cycle rules are not implemented.

@@ -33,7 +33,8 @@ describe("native frames",()=>{
  it("selects the container before drilling into children and hit-tests the pointer",()=>{
    const s=make().slides[0]!;
    expect(pickFrameLayer(s,"child",[])).toBe("frame");
-   expect(pickFrameLayer(s,"child",["frame"])).toBe("child");
+   expect(pickFrameLayer(s,"child",["frame"])).toBe("frame");
+   expect(pickFrameLayer(s,"child",["frame"],false,true)).toBe("child");
    expect(pickFrameLayer(s,"child",[],true)).toBe("child");
    expect(frameAtPoint(s,{x:50,y:50})?.id).toBe("frame");
  });

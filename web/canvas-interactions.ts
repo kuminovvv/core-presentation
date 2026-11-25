@@ -1,4 +1,4 @@
-import { rootSelection, pickFrameLayer, descendants } from "../src/core/frames";
+import { rootSelection, pickFrameLayer, descendants, frameAtPoint } from "../src/core/frames";
 import type { Presentation, SlideElement } from "../src/core/types";
 import {
   hitByMarquee, resizeElements, rotateElements, shiftElements, snapMove,
@@ -28,6 +28,7 @@ interface Gesture {
   didMove: boolean;
   all?: SlideElement[];
   viewport?: { width: number; height: number };
+  lifted?: {node:HTMLElement;parent:Node;next:ChildNode|null;z:string}[];
 }
 
 /** Pointer-driven visual editing. Geometry functions stay usable without the DOM. */
@@ -37,6 +38,7 @@ export class CanvasInteractions {
   private gesture: Gesture | null = null;
   private guides: Guide = {};
   private marquee: Bounds | null = null;
+  private dropFrame: Bounds | null = null;
 
   constructor(private stage: HTMLElement, private hooks: EditorHooks) {
     stage.addEventListener("pointerdown", this.onDown);
@@ -160,6 +162,11 @@ export class CanvasInteractions {
     if (!gesture.didMove && Math.hypot(dx, dy) > 1) {
       gesture.didMove = true;
       this.stage.setPointerCapture(event.pointerId);
+      if(gesture.mode==="move"){
+        const layer=this.stage.querySelector<HTMLElement>(".cp-slide");gesture.lifted=[];
+        if(layer)for(const e of gesture.origin){if(!e.parentId)continue;const node=Array.from(layer.querySelectorAll<HTMLElement>(".cp-element")).find(n=>n.dataset.elementId===e.id);if(!node?.parentNode)continue;
+          gesture.lifted.push({node,parent:node.parentNode,next:node.nextSibling,z:node.style.zIndex});layer.append(node);node.style.zIndex="2147483640";}
+      }
     }
 
     if (gesture.mode === "marquee") {
@@ -193,6 +200,7 @@ export class CanvasInteractions {
       const snapped = event.altKey ? { dx, dy, guides: {} } :
         snapMove(gesture.box, dx, dy, gesture.viewport.width, gesture.viewport.height, other);
       this.guides = snapped.guides;
+      this.dropFrame=slide?frameAtPoint(slide,at,moving)??null:null;
       this.live = shiftElements(gesture.origin, snapped.dx, snapped.dy);
     } else if (gesture.mode === "resize") {
       this.live = resizeElements(gesture.origin, gesture.handle!, dx, dy);
@@ -239,6 +247,7 @@ export class CanvasInteractions {
     window.removeEventListener("pointercancel", this.onCancel);
     if (gesture && this.stage.hasPointerCapture(gesture.pointerId))
       this.stage.releasePointerCapture(gesture.pointerId);
+    for(const item of [...(gesture?.lifted??[])].reverse()){item.parent.insertBefore(item.node,item.next?.parentNode===item.parent?item.next:null);item.node.style.zIndex=item.z;}
     // A cancelled drag must not leave uncommitted positions in the DOM.
     const nodes = new Map(Array.from(this.stage.querySelectorAll<HTMLElement>(".cp-element"))
       .map(item => [item.dataset.elementId, item]));
@@ -255,7 +264,7 @@ export class CanvasInteractions {
     this.gesture = null;
     this.live = {};
     this.guides = {};
-    this.marquee = null;
+    this.marquee = null;this.dropFrame=null;
     this.refresh();
   }
 
@@ -266,7 +275,7 @@ export class CanvasInteractions {
       const node = nodes.get(id);
       if (!node) continue;
       const element=this.elements().find(e=>e.id===id);
-      const parent=this.elements().find(e=>e.id===element?.parentId);
+      const parent=this.gesture?.lifted?.some(item=>item.node===node)?undefined:this.elements().find(e=>e.id===element?.parentId);
       node.style.left = `${patch.x-(parent?.x??0)}px`;
       node.style.top = `${patch.y-(parent?.y??0)}px`;
       node.style.width = `${patch.width}px`;
@@ -276,7 +285,7 @@ export class CanvasInteractions {
   }
 
   private draw(): void {
-    this.stage.querySelectorAll(".selection-box, .selection-multi-mark, .snap-guide, .marquee-box").forEach(n => n.remove());
+    this.stage.querySelectorAll(".selection-box, .selection-multi-mark, .snap-guide, .marquee-box, .frame-drop-highlight").forEach(n => n.remove());
     const elements = this.selectedElements();
     if (elements.length) {
       const box = unionBounds(elements);
@@ -330,6 +339,7 @@ export class CanvasInteractions {
         this.stage.append(guide);
       }
     }
+    if(this.dropFrame){const box=document.createElement("div");box.className="frame-drop-highlight";Object.assign(box.style,{left:this.dropFrame.x+"px",top:this.dropFrame.y+"px",width:this.dropFrame.width+"px",height:this.dropFrame.height+"px",borderWidth:2/this.hooks.scale()+"px"});this.stage.append(box);}
     if (this.marquee) {
       const box = document.createElement("div");
       box.className = "marquee-box";
