@@ -4,7 +4,9 @@ import {
   groupElements, ungroupElements, reorderElements, updateElements,
   parsePresentation, serializePresentation, updateElement,
 } from "../src";
-import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout } from "../src";
+import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout, FrameElement } from "../src";
+import { initFrameTool } from "./frame-tool";
+import { insertFrame, containingFrame, descendants, rootSelection } from "../src/core/frames";
 import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
@@ -68,9 +70,16 @@ const canvas = new CanvasInteractions(stage, {
       }
       return next;
     }
-    return updateElements(project, patches);
+    let next=updateElements(project, patches);
+    if(mode==="move"&&slide&&moving.length===1){
+      const current=next.slides.find(s=>s.id===slideId)!;
+      const e=current.elements.find(e=>e.id===moving[0]!.id)!;
+      if(!e.groupId){const parent=containingFrame(current,e,descendants(current,[e.id]));
+        if(parent?.id!==e.parentId)next=updateElement(next,e.id,{parentId:parent?.id});}
+    }
+    return next;
   }),
-  selectionChanged: () => { renderProperties(); renderTimeline(); },
+  selectionChanged: () => { renderProperties(); renderTimeline(); renderLayers(); },
 });
 
 const picker = $<HTMLSelectElement>("project-picker");
@@ -259,6 +268,7 @@ function render(): void {
   stage.style.height = project.viewport.height + "px";
   const current = project.slides.find(s => s.id === slideId);
   if (current) stage.append(createSlideNode(current, project, false));
+  renderLayers();
   stage.querySelectorAll("iframe").forEach(iframe => iframe.style.pointerEvents = "none");
   fit();
   canvas.refresh();
@@ -323,10 +333,62 @@ function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
     '<div class="layout-control-row"><span>'+(flowing?"В потоке":"Абсолютно")+'</span><div class="icon-segment">'+
     iconButton("layout-settings","Настройки макета","column")+'</div></div>';
 }
+function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
+  const layoutSlide:Slide={...slide,layout:e.layout,elements:slide.elements.filter(child=>child.parentId===e.id).map(child=>({...child,parentId:undefined,x:child.x-e.x,y:child.y-e.y}))};
+  const pair=(a:string,b:string)=>'<div class="field-grid">'+a+b+'</div>';
+  const n=(label:string,key:string,value:number,aria=label)=>'<label class="frame-number" title="'+aria+'"><span>'+label+'</span><input type="number" data-field="'+key+'" aria-label="'+aria+'" value="'+value+'"></label>';
+  const section=(title:string,body:string)=>'<section class="frame-section"><h3>'+title+'</h3>'+body+'</section>';
+  const fold=(title:string,body:string,open=false)=>'<details class="frame-section" '+(open?'open':'')+'><summary>'+title+'<span class="frame-disclosure">+</span></summary>'+body+'</details>';
+  return '<div class="frame-inspector">'+
+    '<div class="frame-heading"><strong>Frame</strong><div class="icon-segment">'+iconButton("source-code","Код слайда","code")+iconButton("frame-layout-toggle","Auto Layout","column",!!e.layout)+'</div></div>'+
+    section("Положение",field("Название","name",e.name??"Frame")+pair(n("X","x",e.x),n("Y","y",e.y)))+
+    section("Layout",layoutControls(layoutSlide,{...project,viewport:{width:e.width,height:e.height}})+
+      '<span class="frame-label">Размеры</span>'+pair(n("W","width",e.width),n("H","height",e.height))+
+      '<label class="frame-check"><input type="checkbox" data-field="clipContent" '+(e.clipContent?'checked':'')+'> Обрезать содержимое</label>')+
+    section("Внешний вид",pair(n("%","frameOpacity",Math.round((e.opacity??1)*100),"Непрозрачность"),n("⌜","borderRadius",e.borderRadius??0,"Скругление")))+
+    fold("Заливка",'<div class="frame-fill">'+field("Цвет (CSS)","fill",e.fill??"transparent")+'</div>',true)+
+    fold("Обводка",field("Граница (CSS)","border",e.border??"none"),!!e.border&&e.border!=="none")+
+    fold("Эффекты",field("Тень (CSS)","boxShadow",e.boxShadow??"none"),!!e.boxShadow&&e.boxShadow!=="none")+
+    fold("Анимация",pick("Эффект","animation",e.animation?.type??"none",["none","fade","slide-up","zoom"])+field("Задержка, мс","animationDelay",e.animation?.delay??0,"number")+field("Длительность, мс","animationDuration",e.animation?.duration??600,"number"))+
+    '</div>';
+}
+function renderLayers(){
+  const host=$("frame-layers"),{slide}=selected();
+  host.replaceChildren();
+  host.hidden=!slide?.elements.some(e=>e.type==="frame");
+  if(!slide||host.hidden)return;
+  const title=document.createElement("div");title.className="layers-heading";title.textContent="Слои";host.append(title);
+  function append(parent?:string,depth=0){
+    for(const e of slide!.elements.filter(e=>e.parentId===parent)){
+      const b=document.createElement("button");b.type="button";b.className="layer-row"+(canvas.ids.includes(e.id)?" active":"");b.dataset.layerId=e.id;
+      b.style.paddingLeft=(10+depth*14)+"px";b.innerHTML=inspectorIcon(e.type==="frame"?"free":e.type==="html"?"code":"layers");
+      const name=document.createElement("span");name.textContent=e.type==="frame"?e.name??"Frame":e.type==="text"?e.text.slice(0,26):e.type;b.append(name);
+      b.addEventListener("click",()=>canvas.select([e.id]));
+      b.addEventListener("contextmenu",event=>{event.preventDefault();canvas.select([e.id]);openObjectMenu(event.clientX,event.clientY);});
+      host.append(b);if(e.type==="frame")append(e.id,depth+1);
+    }
+  }
+  append();
+}
+function makeFrame(rect:{x:number;y:number;width:number;height:number},ids?:string[]){
+  const {slide}=selected();if(!slide)return;
+  const frame={...createElement("frame"),...rect} as FrameElement;
+  if(ids?.length)frame.fill="transparent";
+  store.update(project=>insertFrame(project,slide.id,frame,ids));
+  canvas.select([frame.id]);
+}
+
 function renderProperties(): void {
   const { project, slide, element } = selected();
   if (!slide) {
     props.innerHTML = '<div class="empty-note">Добавьте первый слайд.</div>';
+    return;
+  }
+  if(element?.type==="frame"&&canvas.ids.length===1){
+    props.innerHTML=frameInspector(element,slide,project);
+    bindActions();
+    props.querySelectorAll<HTMLInputElement|HTMLSelectElement>("[data-field]").forEach(input=>input.addEventListener("change",()=>applyProperty(input)));
+    enhanceSelects(props);
     return;
   }
   if (canvas.ids.length > 1) {
@@ -519,12 +581,15 @@ function runAction(action: string): void {
   const { slide } = selected();
   if (!slide) return;
   if (action==="source-code"){sourceEditor.open();return;}
+  const frame=canvas.ids.length===1?slide.elements.find(e=>e.id===canvas.primaryId&&e.type==="frame") as FrameElement|undefined:undefined;
+  if(action==="frame-selection"){const chosen=slide.elements.filter(e=>rootSelection(slide,canvas.ids).includes(e.id));if(chosen.length&&new Set(chosen.map(e=>e.parentId)).size===1)makeFrame(unionBounds(chosen),chosen.map(e=>e.id));return;}
+  if(action==="frame-layout-toggle"){if(frame)store.update(p=>updateElement(p,frame.id,{layout:frame.layout?undefined:{...defaultSlideLayout,paddingX:16,paddingY:16}}));return;}
   if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||action==="layout-space-between"){
     store.update(project=>{
-      const target=project.slides.find(s=>s.id===slide.id)!;
+      const target=frame?project.slides.find(s=>s.id===slide.id)!.elements.find(e=>e.id===frame.id) as FrameElement:project.slides.find(s=>s.id===slide.id)!;
       if(action.startsWith("layout-direction-")){
         const direction=action.slice("layout-direction-".length);
-        target.layout=direction==="free"?undefined:{...defaultSlideLayout,...target.layout,direction:direction as AutoLayout["direction"]};
+        target.layout=direction==="free"?undefined:{...defaultSlideLayout,...(frame?{paddingX:16,paddingY:16}:{}),...target.layout,direction:direction as AutoLayout["direction"]};
       }else if(target.layout){
         if(action==="layout-space-between")target.layout.justify=target.layout.justify==="space-between"?"start":"space-between";
         else{
@@ -555,7 +620,7 @@ function runAction(action: string): void {
   }
   if (action === "delete") {
     canvas.clear();
-    store.update(project => ids.reduce((doc, id) => deleteElement(doc, id), project));
+    store.update(project => rootSelection(slide,ids).reduce((doc, id) => deleteElement(doc, id), project));
     return;
   }
   if (action === "duplicate") {
@@ -569,7 +634,7 @@ function runAction(action: string): void {
     return;
   }
   if (action === "group") {
-    if (ids.length<2) return;
+    if (ids.length<2||new Set(elements.map(e=>e.parentId)).size>1) return;
     store.update(project => groupElements(project, slide.id, ids));
     return;
   }
@@ -615,9 +680,11 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
       value = Math.max(0, value);
   }
   try {
+    if(element?.type==="frame"&&key==="clipContent"){store.update(p=>updateElement(p,element.id,{clipContent:(input as HTMLInputElement).checked}));return;}
+    if(element?.type==="frame"&&key==="frameOpacity"){store.update(p=>updateElement(p,element.id,{opacity:Math.max(0,Math.min(1,Number(value)/100))}));return;}
     if (key.startsWith("layout")) {
       store.update(project => {
-        const target = project.slides.find(s => s.id === slide.id)!;
+        const target = element?.type==="frame"?project.slides.find(s=>s.id===slide.id)!.elements.find(e=>e.id===element.id) as FrameElement:project.slides.find(s => s.id === slide.id)!;
         if (key === "layoutDirection") {
           target.layout = value === "free" ? undefined : { ...defaultSlideLayout, ...target.layout, direction: value as AutoLayout["direction"] };
         } else if (target.layout) {
@@ -662,6 +729,8 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
 function add(kind: ElementKind): void {
   if (!slideId) return;
   const element = createElement(kind);
+  const chosen=selected().element;
+  if(chosen?.type==="frame"){element.parentId=chosen.id;element.x=chosen.x+16;element.y=chosen.y+16;}
   store.update(project => addElement(project, slideId, element));
   canvas.select([element.id]);
 }
@@ -860,14 +929,16 @@ window.addEventListener("keydown", event => {
     event.preventDefault(); store.redo();
   } else if (command && key === "a") {
     event.preventDefault(); canvas.select(selected().slide?.elements.map(el => el.id) ?? []);
+  } else if(!command&&!event.altKey&&key==="f"){event.preventDefault();frameTool.activate();
+  } else if(command&&event.altKey&&key==="g"){event.preventDefault();runAction("frame-selection");
   } else if (event.shiftKey && key === "a" && !command) {
-    event.preventDefault(); runAction("layout-direction-column"); canvas.clear();
+    event.preventDefault(); if(selected().element?.type==="frame")runAction("layout-direction-column");else if(canvas.ids.length){runAction("frame-selection");if(selected().element?.type==="frame")runAction("layout-direction-column");}else runAction("layout-direction-column");
   } else if (command && key === "g" && canvas.ids.length) {
     event.preventDefault(); runAction(event.shiftKey ? "ungroup" : "group");
   } else if (command && key === "d" && canvas.ids.length) {
     event.preventDefault(); runAction("duplicate");
   } else if (event.key === "Escape") {
-    canvas.clear();
+    if(!frameTool.cancel())canvas.clear();
   } else if ((event.key === "Delete" || event.key === "Backspace") && canvas.ids.length) {
     event.preventDefault(); runAction("delete");
   } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key) && canvas.ids.length) {
@@ -888,6 +959,7 @@ window.addEventListener("keydown", event => {
   }
 });
 
+const frameTool=initFrameTool(stage,()=>scale,makeFrame);
 const sourceEditor=initSlideSource({
   current:selected,
   apply:project=>{canvas.clear();store.replace(project);}
@@ -902,6 +974,7 @@ function openObjectMenu(x:number,y:number){
   const groups:MenuItem[][]=[];
   if(elements.length){
     groups.push([
+      {action:"frame-selection",label:"Frame из выделения",icon:"free",shortcut:"Ctrl+Alt+G"},
       {action:"group",label:"Сгруппировать",icon:"group",shortcut:"Ctrl+G",disabled:elements.length<2},
       {action:"ungroup",label:"Разгруппировать",icon:"group",shortcut:"Ctrl+Shift+G",disabled:!grouped},
       {action:"duplicate",label:"Дублировать",icon:"copy",shortcut:"Ctrl+D"},

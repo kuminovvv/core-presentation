@@ -14,6 +14,10 @@ See [the 14-scene Composer study](docs/COMPOSER.md), including native morph tran
 
 Right-click an object on the canvas or use the inspector's three-dot menu for grouping, layering, duplication, deletion and layout order. The **Код** toolbar button opens the current slide source. JSON is the editable native document; changing HTML/CSS/JS converts a native slide into a single full-slide HTML widget only after confirmation. Undo restores the native document. Existing full-slide widgets can be edited directly. Scripts run inside sandboxed iframes in presentation mode, not on the editor canvas. HTML conversion is not a round-trip parser for native objects or animations.
 
+## Frames
+
+Press F or click Frame and drag on the canvas; click for a default-size frame. Ctrl+Alt+G wraps selected siblings in a transparent frame. Frames contain real nested elements and can have their own horizontal/vertical Auto Layout, fixed dimensions, clip content, fill, stroke and shadow. Add elements while a frame is selected or drag a single object fully inside a frame to nest it. Use the Layers list to select a frame or child. Frame coordinates in JSON remain slide-relative; parentId records hierarchy. Frame rotation, wrap/grid, Hug/Fill sizing and morph between frame-containing slides are not yet supported (such slides use fade instead).
+
 ## Slide Auto Layout
 
 Clear selection to open slide properties, then choose **Auto Layout → Направление**. Horizontal and vertical modes arrange editable objects in document order with gap, horizontal/vertical padding, cross-axis alignment, and main-axis distribution (including space-between). Drag managed objects along the layout axis to reorder, or use the inspector's Earlier/Later controls. Grouped objects are treated as one item. Switch any selected object/group to absolute positioning to place decorative overlays freely. Geometry reflows when item dimensions or membership change and is stored in the same document for preview, HTML/PDF and MCP. Switch back to Free to keep the current positions without automatic arrangement.

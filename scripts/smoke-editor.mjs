@@ -387,6 +387,25 @@ try {
   await page.locator("#preview-close").click();
   await page.locator("#undo").click();
   check(await page.locator("#editor-stage .cp-element").count()===2,"Undo restores native slide after HTML conversion");
+  await page.locator("#add-slide").click();
+  await page.keyboard.press("f");
+  const boxFrame=await page.locator("#editor-stage").boundingBox();
+  await page.mouse.move(boxFrame.x+boxFrame.width*.15,boxFrame.y+boxFrame.height*.15);
+  await page.mouse.down();
+  await page.mouse.move(boxFrame.x+boxFrame.width*.65,boxFrame.y+boxFrame.height*.65,{steps:8});
+  await page.mouse.up();
+  await page.locator(".frame-inspector").waitFor();
+  check(await page.locator("#editor-stage .cp-frame").count()===1,"F draws a native frame");
+  await page.locator("#add-shape").click();
+  check(await page.locator("#editor-stage .cp-frame > .cp-element").count()===1,"New shape is nested in the frame");
+  const frameId=await page.locator("#editor-stage .cp-frame").getAttribute("data-element-id");
+  await page.locator('[data-layer-id="'+frameId+'"]').click();
+  await page.locator('[data-action="layout-direction-row"]').click();
+  await page.locator('input[data-field="layoutPaddingX"]').fill("25");
+  await page.locator('input[data-field="layoutPaddingX"]').blur();
+  check(await page.locator("#editor-stage .cp-frame > .cp-element").evaluate(el=>parseFloat(el.style.left))===25,"Frame Auto Layout controls child position");
+  await page.locator('input[data-field="clipContent"]').uncheck();
+  check(await page.locator("#editor-stage .cp-frame").evaluate(el=>getComputedStyle(el).overflow)==="visible","Clip content can be toggled");
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

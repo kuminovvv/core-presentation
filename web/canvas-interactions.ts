@@ -1,3 +1,4 @@
+import { rootSelection } from "../src/core/frames";
 import type { Presentation, SlideElement } from "../src/core/types";
 import {
   hitByMarquee, resizeElements, rotateElements, shiftElements, snapMove,
@@ -46,7 +47,8 @@ export class CanvasInteractions {
   clear(): void { this.select([]); }
   select(ids: string[]): void {
     const valid = new Set(this.elements().map(e => e.id));
-    this.chosen = new Set(ids.filter(id => valid.has(id)));
+    const slide=this.hooks.project().slides.find(s=>s.id===this.hooks.slideId());
+    this.chosen = new Set((slide?rootSelection(slide,ids):ids).filter(id => valid.has(id)));
     this.refresh();
     this.hooks.selectionChanged();
   }
@@ -93,7 +95,7 @@ export class CanvasInteractions {
 
     if (resize || rotating) {
       const elements = this.selectedElements();
-      if (!elements.length) return;
+      if (!elements.length || (rotating && elements.some(e=>e.type==="frame"))) return;
       const box = unionBounds(elements);
       this.begin(event, {
         mode: resize ? "resize" : "rotate",
@@ -171,7 +173,8 @@ export class CanvasInteractions {
         ...this.elements().filter(e => e.groupId && groups.has(e.groupId)).map(e => e.id),
       ])];
       if (ids.length !== this.chosen.size || ids.some(id => !this.chosen.has(id))) {
-        this.chosen = new Set(ids);
+        const slide=this.hooks.project().slides.find(s=>s.id===this.hooks.slideId());
+        this.chosen = new Set(slide?rootSelection(slide,ids):ids);
         this.refresh();
         this.hooks.selectionChanged();
       } else {
@@ -239,8 +242,9 @@ export class CanvasInteractions {
     for (const element of gesture?.origin ?? []) {
       const node = nodes.get(element.id);
       if (!node) continue;
-      node.style.left = element.x + "px";
-      node.style.top = element.y + "px";
+      const parent=gesture?.all?.find(e=>e.id===element.parentId);
+      node.style.left = (element.x-(parent?.x??0))+"px";
+      node.style.top = (element.y-(parent?.y??0))+"px";
       node.style.width = element.width + "px";
       node.style.height = element.height + "px";
       node.style.transform = `rotate(${element.rotation ?? 0}deg)`;
@@ -258,8 +262,10 @@ export class CanvasInteractions {
     for (const [id, patch] of Object.entries(this.live)) {
       const node = nodes.get(id);
       if (!node) continue;
-      node.style.left = `${patch.x}px`;
-      node.style.top = `${patch.y}px`;
+      const element=this.elements().find(e=>e.id===id);
+      const parent=this.elements().find(e=>e.id===element?.parentId);
+      node.style.left = `${patch.x-(parent?.x??0)}px`;
+      node.style.top = `${patch.y-(parent?.y??0)}px`;
       node.style.width = `${patch.width}px`;
       node.style.height = `${patch.height}px`;
       node.style.transform = `rotate(${patch.rotation ?? 0}deg)`;
@@ -309,7 +315,7 @@ export class CanvasInteractions {
       rotation.setAttribute("role", "button");
       rotation.setAttribute("aria-label", "Rotate selection");
       rotation.title = "Повернуть (Shift: по 15°)";
-      selection.append(rotation);
+      if(!elements.some(e=>e.type==="frame"))selection.append(rotation);
       this.stage.append(selection);
     }
     if (this.guides.x !== undefined || this.guides.y !== undefined) {
