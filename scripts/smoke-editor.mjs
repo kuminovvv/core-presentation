@@ -261,11 +261,12 @@ try {
   check(html.includes("data:image/png;base64,"),
     "Offline export contains the uploaded embedded image");
   const pdfAlerts = [];
-  page.on("dialog", async dialog => {
+  const onPdfDialog = async dialog => {
     pdfAlerts.push(dialog.message());
     console.log("PDF_ALERT:", dialog.message());
     await dialog.dismiss();
-  });
+  };
+  page.on("dialog", onPdfDialog);
   page.on("response", response => {
     if (response.url().includes("/api/export/pdf")) console.log("PDF_HTTP:", response.status());
   });
@@ -281,6 +282,7 @@ try {
   await page.locator("#export-pdf").click({ timeout: 5000 });
   console.log("PDF_CLICK_FINISHED");
   const pdfDownload = await pendingPdf;
+  page.off("dialog", onPdfDialog);
   const pdf = await readFile(await pdfDownload.path());
   check(pdfAlerts.length === 0, "No PDF browser error alerts");
   check(pdf.subarray(0, 5).toString("utf8") === "%PDF-",
