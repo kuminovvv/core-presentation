@@ -32,8 +32,18 @@ try {
   await page.waitForFunction(() => document.querySelectorAll(".cp-slide").length === 1 && location.hash === "#14");
   const frame = page.frameLocator(".cp-slide iframe");
   await frame.getByRole("textbox", {name:"Message"}).fill("Hello Core");
-  await frame.getByRole("button", {name:"Send message"}).click();
-  check(await frame.locator("output").textContent() === "You wrote: Hello Core", "Offline interactive widget responds");
+  // Playwright's iframe boundingBox omits the parent CSS scale for srcdoc frames.
+  // Map the real button center into browser coordinates to exercise a real pointer click.
+  const box = await page.locator(".cp-slide iframe").boundingBox();
+  const button = await frame.getByRole("button", {name:"Send message"}).evaluate(el => {
+    const rect = el.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, w: innerWidth, h: innerHeight };
+  });
+  await page.mouse.click(box.x + button.x * box.width / button.w, box.y + button.y * box.height / button.h);
+  check(await frame.locator("output").textContent() === "You wrote: Hello Core", "Offline interactive widget responds to a real click");
+  await frame.getByRole("textbox", {name:"Message"}).fill("Keyboard");
+  await frame.getByRole("textbox", {name:"Message"}).press("Enter");
+  check(await frame.locator("output").textContent() === "You wrote: Keyboard", "Offline interactive widget responds to Enter");
   await page.locator("#notes-toggle").click();
   check(await page.locator("#speaker-notes").isVisible(), "Speaker notes are accessible");
   await page.emulateMedia({ reducedMotion: "reduce" });
