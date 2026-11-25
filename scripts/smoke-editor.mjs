@@ -122,8 +122,9 @@ try {
   check(true, "Shift-click multi-selection works");
 
   await page.keyboard.press("Control+g");
-  await page.getByRole("button", { name: "Разгруппировать" }).waitFor();
-  check(true, "Ctrl+G groups selected elements");
+  await page.locator("#inspector-more").click();
+  check(await page.locator('[data-menu-action="ungroup"]').isEnabled(), "Ctrl+G groups selected elements");
+  await page.keyboard.press("Escape");
 
   await page.locator("#timeline-toggle").click();
   check(await page.locator("#timeline-panel").isVisible(), "Animation timeline opens");
