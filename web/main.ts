@@ -14,9 +14,13 @@ import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
 import { initTheme } from "./theme";
 import { initPanels } from "./panels";
+import { enhanceSelects, syncSelect } from "./selects";
+import { bindAnimationBar, initTimelineHeight, timelineRange } from "./timeline";
 
+enhanceSelects();
 initTheme();
 initPanels();
+initTimelineHeight();
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
@@ -69,7 +73,8 @@ const sync = new ProjectSync({
       applyingRemote = false;
     }
   },
-  canApplyRemote: () => !document.hidden &&
+  canApplyRemote: () => !document.hidden && !document.documentElement.classList.contains("timeline-dragging") &&
+    !document.querySelector(".studio-select-component [aria-expanded=true]") &&
     !document.activeElement?.matches("input,textarea,select,[contenteditable='true']"),
   onState: state => {
     const indicator = $("sync-status");
@@ -77,6 +82,7 @@ const sync = new ProjectSync({
     indicator.dataset.state = state.status;
     $("sync-remote").hidden = $("sync-copy").hidden = state.status !== "conflict";
     picker.value = state.name ?? "";
+    syncSelect(picker);
     $<HTMLDetailsElement>("project-actions").hidden = state.name === null;
   },
 });
@@ -92,6 +98,7 @@ async function refreshProjects(): Promise<void> {
       picker.dataset.signature = signature;
     }
     picker.value = selectedName;
+    syncSelect(picker);
   } catch {
     // Offline mode continues to work without a local project server.
   }
@@ -112,7 +119,7 @@ picker.addEventListener("change", async () => {
     }
   } catch (error) {
     alert(error instanceof Error ? error.message : String(error));
-  } finally { picker.value = sync.activeName ?? ""; }
+  } finally { picker.value = sync.activeName ?? ""; syncSelect(picker); }
 });
 
 $("new-project").addEventListener("click", () => dialog.showModal());
@@ -242,7 +249,8 @@ function render(): void {
 
 function fit(): void {
   const { width, height } = store.value.viewport;
-  scale = Math.min((shell.clientWidth - 76) / width, (shell.clientHeight - 76) / height);
+  const padding = Math.min(48, shell.clientWidth * 0.05, shell.clientHeight * 0.08);
+  scale = Math.min((shell.clientWidth - padding) / width, (shell.clientHeight - padding) / height);
   if (!Number.isFinite(scale) || scale <= 0) return;
   const x = (shell.clientWidth - width * scale) / 2;
   const y = (shell.clientHeight - height * scale) / 2;
@@ -361,6 +369,7 @@ function renderProperties(): void {
   }
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
     .forEach(input => input.addEventListener("change", () => applyProperty(input)));
+  enhanceSelects(props);
   const fileInput = props.querySelector<HTMLInputElement>("#image-upload");
   if (fileInput && element?.type === "image") fileInput.addEventListener("change", async () => {
     const file = fileInput.files?.[0];
@@ -395,6 +404,13 @@ function renderTimeline(): void {
   const timeline = $("timeline-rows");
   const slide = selected().slide;
   timeline.replaceChildren();
+  const range = timelineRange(slide?.elements.map(element => element.animation) ?? []);
+  const ruler = $("timeline-ruler");
+  ruler.replaceChildren(...Array.from({ length: 6 }, (_, i) => {
+    const mark = document.createElement("span");
+    mark.textContent = String(Math.round(range * i / 5)) + (i === 0 ? " мс" : "");
+    return mark;
+  }));
   if (!slide) return;
   if (!slide.elements.length) {
     timeline.innerHTML = '<div class="timeline-empty">Добавьте элементы на слайд, чтобы настроить анимацию.</div>';
@@ -406,21 +422,24 @@ function renderTimeline(): void {
     const active = element.animation && element.animation.type !== "none";
     const row = document.createElement("div");
     row.className = "timeline-row" + (canvas.ids.includes(element.id) ? " active" : "");
-    row.innerHTML = `
-      <button type="button" class="timeline-object" title="${escape(element.id)}">${escape(
-        element.type === "text" ? element.text.slice(0, 25) : element.type.toUpperCase())}</button>
-      <div class="timeline-track">${active
-        ? `<div class="timeline-bar" style="left:${Math.min(100, delay / 25)}%;width:${Math.min(100, duration / 25)}%" title="${escape(element.animation?.type)} · ${delay}–${delay + duration} мс"></div>`
-        : '<span class="timeline-none">Без анимации</span>'}</div>
-      <input type="number" class="timeline-number" data-timeline="delay" min="0" max="10000" step="50" aria-label="Задержка анимации" value="${delay}" title="Задержка, мс">
-      <input type="number" class="timeline-number" data-timeline="duration" min="0" max="10000" step="50" aria-label="Длительность анимации" value="${duration}" title="Длительность, мс">`;
+    row.dataset.elementId = element.id;
+    row.innerHTML = '<button type="button" class="timeline-object" title="' + escape(element.id) + '">' +
+      escape(element.type === "text" ? element.text.slice(0, 25) : ({ shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type]) + '</button>' +
+      '<div class="timeline-track">' + (active
+        ? '<div class="timeline-bar" tabindex="0" role="slider" aria-label="Начало анимации" aria-valuemin="0" aria-valuemax="' + range + '" aria-valuenow="' + delay + '" style="left:' + (delay / range * 100) + '%;width:' + (duration / range * 100) + '%" title="' + escape(element.animation?.type) + ' · ' + delay + '–' + (delay + duration) + ' мс"><span class="timeline-edge start" data-edge="start"></span><span class="timeline-edge end" data-edge="end"></span></div>'
+        : '<span class="timeline-none">Без анимации</span>') + '</div>' +
+      '<input type="number" class="timeline-number" data-timeline="delay" min="0" max="10000" step="50" aria-label="Задержка анимации" value="' + delay + '">' +
+      '<input type="number" class="timeline-number" data-timeline="duration" min="0" max="10000" step="50" aria-label="Длительность анимации" value="' + duration + '">';
     row.querySelector(".timeline-object")!.addEventListener("click", () => canvas.select([element.id]));
+    const animation = element.animation ?? { type: "fade" as const, duration: 600, delay: 0 };
+    const commit = (delay: number, duration: number) => {
+      store.update(project => updateElement(project, element.id, { animation: { ...animation, delay, duration } }));
+    };
     row.querySelectorAll<HTMLInputElement>("input").forEach(input => input.addEventListener("change", () => {
       const value = Math.max(0, Math.min(10000, Number(input.value) || 0));
-      const animation = element.animation ?? { type: "fade" as const, duration: 600, delay: 0 };
-      const patch = { animation: { ...animation, [input.dataset.timeline!]: value } };
-      store.update(project => updateElement(project, element.id, patch));
+      commit(input.dataset.timeline === "delay" ? value : delay, input.dataset.timeline === "duration" ? value : duration);
     }));
+    if (active) bindAnimationBar(row, delay, duration, range, commit);
     timeline.append(row);
   }
 }
@@ -708,7 +727,7 @@ document.addEventListener("fullscreenchange", () => {
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
   if (event.key === "Escape" && player) { closePreview(); return; }
-  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable='true']"));
+  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, [role=separator], [contenteditable='true']"));
   if (typing || player) return;
   const command = event.ctrlKey || event.metaKey;
   const key = event.key.toLowerCase();

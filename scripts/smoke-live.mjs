@@ -78,7 +78,7 @@ try {
   const second = await context.newPage();
   second.on("pageerror", error => errors.push(error.message));
   await second.goto(url);
-  await second.locator("#project-picker").selectOption("live-sync");
+  await second.locator("#project-picker").selectOption("live-sync", {force:true});
   await second.locator(".cp-element.cp-text").filter({ hasText: "Edited by the MCP agent" }).waitFor();
   verify(true, "A second browser tab can open the same project");
 

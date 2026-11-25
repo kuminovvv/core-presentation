@@ -32,27 +32,41 @@ try {
 
   // Theme must affect only the studio chrome, never the slide document.
   const slideBackground = await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background);
-  await page.locator("#theme-picker").selectOption("light");
+  await page.locator("#theme-picker").selectOption("light", {force:true});
   check(await page.locator("html").getAttribute("data-theme") === "light", "Light theme is available");
-  const light = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
-  await page.locator("#theme-picker").selectOption("dark");
+  const light = await page.locator(".studio-sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  await page.locator("#theme-picker").selectOption("dark", {force:true});
   check(await page.locator("html").getAttribute("data-theme") === "dark", "Dark theme is available");
-  const dark = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  const dark = await page.locator(".studio-sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
   check(light !== dark, "Theme changes studio surfaces");
   check(await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background) === slideBackground,
     "Switching themes preserves slide colors");
   await page.reload();
   check(await page.locator("#theme-picker").inputValue() === "dark", "Theme choice persists after reload");
   await page.emulateMedia({ colorScheme: "light" });
-  await page.locator("#theme-picker").selectOption("system");
+  await page.locator("#theme-picker").selectOption("system", {force:true});
   check(await page.locator("html").getAttribute("data-theme") === "light", "System mode follows light OS preference");
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   check(true, "System mode reacts to OS theme changes");
-  await page.locator("#theme-picker").selectOption("light");
-  check(await page.locator(".sidebar").evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius)) >= 18,
+  await page.locator("#theme-picker").selectOption("light", {force:true});
+  check(await page.locator(".studio-sidebar").evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius)) >= 18,
     "Rounded panel styling is applied");
   const originalWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
+  const rightWidth = await page.locator("#inspector-panel").evaluate(el => el.getBoundingClientRect().width);
+  check(Math.abs(originalWidth - rightWidth) < 1, "Side panels have equal default widths");
+  const gaps = await page.evaluate(() => {
+    const a = document.querySelector("#slides-panel").getBoundingClientRect();
+    const b = document.querySelector(".workspace").getBoundingClientRect();
+    const c = document.querySelector("#inspector-panel").getBoundingClientRect();
+    return [b.left - a.right, c.left - b.right];
+  });
+  check(gaps.every(gap => gap >= 0 && gap < 20), "Canvas fills the center with no empty columns");
+  await page.locator(".theme-control [role=combobox]").click();
+  await page.locator(".theme-control [role=option]").filter({hasText:"Тёмная"}).click();
+  check(await page.locator("html").getAttribute("data-theme") === "dark", "Basecoat dropdown changes theme with real pointer");
+  await page.locator(".theme-control [role=combobox]").click();
+  await page.locator(".theme-control [role=option]").filter({hasText:"Светлая"}).click();
   await page.locator("#slides-resizer").focus();
   await page.keyboard.press("ArrowRight");
   const resizedWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
@@ -69,9 +83,9 @@ try {
   if (process.env.STUDIO_THEME_SCREENSHOTS) {
     await mkdir(dirname(process.env.STUDIO_THEME_SCREENSHOTS), { recursive: true });
     await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-light.png" });
-    await page.locator("#theme-picker").selectOption("dark");
+    await page.locator("#theme-picker").selectOption("dark", {force:true});
     await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-dark.png" });
-    await page.locator("#theme-picker").selectOption("light");
+    await page.locator("#theme-picker").selectOption("light", {force:true});
   }
 
   await page.locator("#add-text").click();
@@ -114,6 +128,32 @@ try {
   await page.locator("#timeline-toggle").click();
   check(await page.locator("#timeline-panel").isVisible(), "Animation timeline opens");
   check(await page.locator(".timeline-row").count() > 1, "Timeline contains editable element tracks");
+  const animated = page.locator(".timeline-row").filter({has:page.locator(".timeline-bar")}).first();
+  const trackBox = await animated.locator(".timeline-track").boundingBox();
+  const barBox = await animated.locator(".timeline-bar").boundingBox();
+  const startDelay = Number(await animated.locator('[data-timeline="delay"]').inputValue());
+  const startDuration = Number(await animated.locator('[data-timeline="duration"]').inputValue());
+  await page.mouse.move(barBox.x + barBox.width / 2, barBox.y + barBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(barBox.x + barBox.width / 2 + trackBox.width * .1, barBox.y + barBox.height / 2,{steps:8});
+  await page.mouse.up();
+  check(Number(await animated.locator('[data-timeline="delay"]').inputValue()) > startDelay, "Dragging animation bar changes delay");
+  check(Number(await animated.locator('[data-timeline="duration"]').inputValue()) === startDuration, "Moving bar preserves duration");
+  const edge = await animated.locator(".timeline-edge.end").boundingBox();
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + edge.width / 2 + trackBox.width * .06, edge.y + edge.height / 2,{steps:8});
+  await page.mouse.up();
+  check(Number(await animated.locator('[data-timeline="duration"]').inputValue()) > startDuration, "Dragging end handle changes duration");
+  const panelHeight = await page.locator("#timeline-panel").evaluate(el => el.getBoundingClientRect().height);
+  const grip = await page.locator("#timeline-resizer").boundingBox();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 - 65,{steps:8});
+  await page.mouse.up();
+  check(await page.locator("#timeline-panel").evaluate(el => el.getBoundingClientRect().height) > panelHeight + 30, "Timeline height can be resized with pointer");
+  await page.locator("#timeline-resizer").focus();
+  await page.keyboard.press("ArrowDown");
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -241,10 +281,15 @@ try {
     "Layout gallery inserts a native editable two-column slide");
 
   // Slide thumbnails can be rearranged without changing their stable IDs.
-  const drag = page.locator(".slide-row").last();
-  const lastId = await drag.getAttribute("data-slide-id");
-  await drag.dragTo(page.locator(".slide-row").first(), { timeout: 10000 });
-  check(await page.locator(".slide-row").first().getAttribute("data-slide-id") === lastId,
+  // Both drag endpoints must be simultaneously visible in the scrollable list.
+  // Wider slide previews may put the last thumbnail below the fold.
+  const drag = page.locator(".slide-row").nth(1);
+  const first = page.locator(".slide-row").first();
+  const movedId = await drag.getAttribute("data-slide-id");
+  await first.scrollIntoViewIfNeeded();
+  await drag.scrollIntoViewIfNeeded();
+  await drag.dragTo(first, { timeout: 10000 });
+  check(await page.locator(".slide-row").first().getAttribute("data-slide-id") === movedId,
     "Dragging thumbnails changes slide order");
 
   await page.reload();

@@ -23,7 +23,7 @@
           </details>
         </div>
         <div class="project-name"><input id="project-title" aria-label="Название презентации" maxlength="140" /></div>
-        <div class="appearance"><label class="theme-control" title="Оформление интерфейса"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4m-4 0h8"/></svg><select id="theme-picker" class="select" aria-label="Тема интерфейса"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></label></div>
+        <div class="appearance"><div class="theme-control" title="Оформление интерфейса"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4m-4 0h8"/></svg><select id="theme-picker" class="select" aria-label="Тема интерфейса"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></div></div>
         <div class="toolbar right">
           <button id="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
           <button id="redo" title="Повторить (Ctrl+Shift+Z)" aria-label="Повторить" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5m5 5H10a6 6 0 0 0 0 12h2"/></svg></button>
@@ -40,8 +40,8 @@
         </div>
       </header>
       <div class="app-body">
-        <aside class="sidebar" id="slides-panel">
-          <div id="slides-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели слайдов" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="340" aria-valuenow="216"></div>
+        <aside class="studio-sidebar" id="slides-panel">
+          <div id="slides-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели слайдов" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="420" aria-valuenow="260"></div>
           <div class="panel-head"><span>Слайды</span>
             <div class="sidebar-buttons">
               <button id="add-slide" title="Добавить пустой слайд" aria-label="Добавить пустой слайд" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -78,13 +78,16 @@
             <div id="editor-stage" class="editor-stage" aria-label="Холст слайда"></div>
           </div>
           <section id="timeline-panel" class="timeline-panel" aria-label="Временная шкала анимаций" hidden>
-            <div class="timeline-header"><span>Анимации слайда</span><span>0 мс</span><span>500</span><span>1000</span><span>1500</span><span>2000+</span></div>
-            <div id="timeline-rows" class="timeline-rows"></div>
+            <div id="timeline-resizer" class="timeline-resizer" role="separator" tabindex="0" aria-label="Высота панели анимаций" aria-orientation="horizontal" aria-valuemin="120" aria-valuemax="500" aria-valuenow="200"></div>
+            <div class="timeline-scroll">
+              <div class="timeline-header"><span>Анимации слайда</span><div id="timeline-ruler" class="timeline-ruler"></div><span>Старт, мс</span><span>Длина, мс</span></div>
+              <div id="timeline-rows" class="timeline-rows"></div>
+            </div>
           </section>
           <div class="status"><span id="slide-counter"></span><span id="viewport-label">1600 × 900 · 16:9</span><span id="zoom"></span></div>
         </main>
         <aside class="inspector" id="inspector-panel">
-          <div id="inspector-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели свойств" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="420" aria-valuenow="280"></div>
+          <div id="inspector-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели свойств" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="420" aria-valuenow="260"></div>
           <div class="panel-head">Свойства</div>
           <div id="properties" class="properties"></div>
         </aside>
