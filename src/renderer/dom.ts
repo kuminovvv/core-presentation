@@ -30,7 +30,7 @@ export function createElementNode(element: SlideElement, interactive = true): HT
       wrapper.classList.add("cp-text");
       wrapper.textContent = element.text;
       Object.assign(wrapper.style, {
-        whiteSpace: "pre-wrap",
+        whiteSpace: element.sizingX==="hug"?"pre":"pre-wrap",
         overflowWrap: "anywhere",
         fontFamily: element.fontFamily ?? "Inter, system-ui, sans-serif",
         fontSize: `${element.fontSize ?? 56}px`,

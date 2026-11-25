@@ -1,4 +1,5 @@
 import type { Presentation, Slide, SlideElement, SlideLayout } from "./types";
+import { fitText } from "./text-layout";
 
 export const defaultSlideLayout: SlideLayout = {
   direction: "column", gap: 24, paddingX: 64, paddingY: 64,
@@ -38,11 +39,13 @@ export function layoutPadding(l:SlideLayout){
 }
 type Placement={x:number;y:number;width:number;height:number};
 function arrangeFlat(slide:Slide,viewport:Viewport,hugX=false,hugY=false){
-  const l=slide.layout!, p=layoutPadding(l),flow=units(slide),row=l.direction==="row";
+  const l=slide.layout!, p=layoutPadding(l),row=l.direction==="row";
   const mainPad=row?p.left:p.top,crossPad=row?p.top:p.left;
   const main=Math.max(0,(row?viewport.width-p.left-p.right:viewport.height-p.top-p.bottom));
   const cross=Math.max(0,(row?viewport.height-p.top-p.bottom:viewport.width-p.left-p.right));
   const mainHug=row?hugX:hugY,crossHug=row?hugY:hugX;
+  const prepared=slide.elements.map(e=>e.type==="text"?fitText(e,!row&&!crossHug&&e.sizingX==="fill"&&e.layoutPosition!=="absolute"&&!e.groupId?Math.max(1,cross):e.width):e);
+  const flow=units({...slide,elements:prepared});
   const size=(u:Unit)=>row?u.width:u.height, cs=(u:Unit)=>row?u.height:u.width;
   const fill=(u:Unit,axis:"x"|"y")=>u.elements.length===1&&u.elements[0]![axis==="x"?"sizingX":"sizingY"]==="fill";
   const mainFill=(u:Unit)=>!mainHug&&fill(u,row?"x":"y");
@@ -102,15 +105,15 @@ function arrangeFlat(slide:Slide,viewport:Viewport,hugX=false,hugY=false){
     });
     contentW=row?maxMain:naturalCross;contentH=row?naturalCross:maxMain;
   }
-  return {elements:slide.elements.map(e=>positions.has(e.id)?{...e,...positions.get(e.id)!}:e),width:Math.max(1,round(contentW+p.left+p.right)),height:Math.max(1,round(contentH+p.top+p.bottom))};
+  return {elements:prepared.map(e=>{const placed=positions.has(e.id)?{...e,...positions.get(e.id)!}:e;return placed.type==="text"?fitText(placed):placed;}),width:Math.max(1,round(contentW+p.left+p.right)),height:Math.max(1,round(contentH+p.top+p.bottom))};
 }
 function resolveFlat(slide:Slide,viewport:Viewport):Slide{
-  if(!slide.layout)return slide;
+  if(!slide.layout)return {...slide,elements:slide.elements.map(e=>e.type==="text"?fitText(e):e)};
   return {...slide,elements:arrangeFlat(slide,viewport).elements};
 }
 export function resolveSlideLayout(slide:Slide,viewport:Viewport):Slide{
   if(!slide.elements.some(e=>e.type==="frame"))return resolveFlat(slide,viewport);
-  const elements=slide.elements.map(e=>({...e}));
+  const elements=slide.elements.map(e=>e.type==="text"?fitText({...e}):({...e}));
   const children=(id?:string)=>elements.filter(e=>e.parentId===id);
   function move(e:SlideElement,dx:number,dy:number){
     e.x=round(e.x+dx);e.y=round(e.y+dy);
@@ -129,10 +132,10 @@ export function resolveSlideLayout(slide:Slide,viewport:Viewport):Slide{
     }
     if(!measure)for(const e of list)if(e.type==="frame")arrange(e);
   }
-  arrange(undefined,true);arrange();return {...slide,elements};
+  arrange(undefined,true);arrange();arrange(undefined,true);arrange();return {...slide,elements};
 }
 export function reflowPresentation(project: Presentation): Presentation {
-  if (!project.slides.some(s => s.layout || s.elements.some(e=>e.type==="frame"))) return project;
+  if (!project.slides.some(s => s.layout || s.elements.some(e=>e.type==="frame"||(e.type==="text"&&(e.sizingX==="hug"||e.sizingY==="hug"))))) return project;
   return { ...project, slides: project.slides.map(s => resolveSlideLayout(s, project.viewport)) };
 }
 export function layoutOverflows(slide: Slide, viewport: Viewport): boolean {

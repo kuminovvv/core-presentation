@@ -6,7 +6,7 @@ import {
 } from "../src";
 import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout, FrameElement } from "../src";
 import { initFrameTool } from "./frame-tool";
-import { insertFrame, containingFrame, descendants, rootSelection, parentLayout, isManaged, reorderFrameChild } from "../src/core/frames";
+import { insertFrame, frameAtPoint, descendants, rootSelection, parentLayout, isManaged, reorderFrameChild } from "../src/core/frames";
 import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
@@ -15,6 +15,10 @@ import { ProjectSync } from "./project-sync";
 import { createLayoutSlide } from "../src/editor/layouts";
 import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
+import { shortcutKey } from "./shortcuts";
+import { captureTextAdvances } from "./text-metrics";
+import { fitText } from "../src/core/text-layout";
+import type { TextElement } from "../src/core/types";
 import { inspectorIcon } from "./inspector-icons";
 import { createContextMenu } from "./context-menu";
 import type { MenuItem } from "./context-menu";
@@ -57,14 +61,16 @@ const canvas = new CanvasInteractions(stage, {
   project: () => store.value,
   slideId: () => slideId,
   scale: () => scale,
-  commit: (patches, mode) => store.update(project => {
+  commit: (patches, mode, point) => store.update(project => {
     const slide = project.slides.find(s => s.id === slideId);
     const moving = slide?.elements.filter(e => Object.prototype.hasOwnProperty.call(patches, e.id)) ?? [];
     if(mode==="move"&&slide&&moving.length===1&&!moving[0]!.groupId){
       const original=moving[0]!, candidate={...original,...patches[original.id]!};
-      const target=containingFrame(slide,candidate,descendants(slide,[original.id]));
+      const target=frameAtPoint(slide,point,descendants(slide,[original.id]));
       if(target?.id!==original.parentId){
-        return updateElement(project,original.id,{...patches[original.id],parentId:target?.id});
+        let next=updateElement(project,original.id,{...patches[original.id],parentId:target?.id,...(!target?{sizingX:original.sizingX==="fill"?"fixed":original.sizingX,sizingY:original.sizingY==="fill"?"fixed":original.sizingY}:{})});
+        if(target?.layout)next=reorderFrameChild(next,slideId,original.id,target.layout.direction==="row"?point.x:point.y);
+        return next;
       }
       if(original.parentId&&isManaged(slide,original)){
         const layout=parentLayout(slide,original)!;
@@ -80,6 +86,11 @@ const canvas = new CanvasInteractions(stage, {
         next = reorderLayoutAt(next, slideId, flow.map(e => e.id), slide.layout.direction === "row" ? box.x + box.width / 2 : box.y + box.height / 2);
       }
       return next;
+    }
+    if(mode==="resize"){
+      const resized:Record<string,Partial<SlideElement>>={};
+      for(const e of moving){const p=patches[e.id]!;resized[e.id]={...p,...(Math.abs(p.width-e.width)>.01?{sizingX:"fixed" as const}:{}),...(Math.abs(p.height-e.height)>.01?{sizingY:"fixed" as const}:{})};}
+      return updateElements(project,resized);
     }
     return updateElements(project, patches);
   }),
@@ -456,6 +467,7 @@ function renderProperties(): void {
       ${field("Связь между слайдами (Morph ID)","morphId",element.morphId)}
 
       ${element.type === "text" ? `
+        <div class="property-section">Resizing</div><div class="icon-segment text-resizing">${iconButton("text-auto-width","Auto width","textWidth",element.sizingX==="hug"&&element.sizingY==="hug")}${iconButton("text-auto-height","Auto height","textHeight",element.sizingX!=="hug"&&element.sizingY==="hug")}${iconButton("text-fixed","Fixed size","textFixed",element.sizingX!=="hug"&&element.sizingY!=="hug")}</div>
         ${area("Текст","text",element.text)}
         ${field("Размер шрифта","fontSize",element.fontSize ?? 56,"number")}
         ${field("Семейство шрифта","fontFamily",element.fontFamily ?? "Inter, system-ui, sans-serif")}
@@ -601,6 +613,10 @@ function runAction(action: string): void {
   const { slide } = selected();
   if (!slide) return;
   if (action==="source-code"){sourceEditor.open();return;}
+  if(["text-auto-width","text-auto-height","text-fixed"].includes(action)){
+    const e=selected().element;if(e?.type!=="text")return;
+    store.update(p=>updateElement(p,e.id,{sizingX:action==="text-auto-width"?"hug":"fixed",sizingY:action==="text-fixed"?"fixed":"hug",textAdvances:captureTextAdvances(e)}));return;
+  }
   const frame=canvas.ids.length===1?slide.elements.find(e=>e.id===canvas.primaryId&&e.type==="frame") as FrameElement|undefined:undefined;
   if(action==="frame-selection"){const chosen=slide.elements.filter(e=>rootSelection(slide,canvas.ids).includes(e.id));if(chosen.length&&new Set(chosen.map(e=>e.parentId)).size===1)makeFrame(unionBounds(chosen),chosen.map(e=>e.id));return;}
   if(frame&&action==="frame-fill-clear"){store.update(p=>updateElement(p,frame.id,{fill:"transparent"}));return;}
@@ -766,7 +782,10 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
       } : key === "animationDuration" ? {
         animation: { type: element.animation?.type ?? "fade", duration: Number(value), delay: element.animation?.delay ?? 0 }
       } : key === "morphId" ? { morphId: String(value).trim() || undefined } : { [key]: value };
-      store.update(project => updateElement(project, element.id, patch as Partial<SlideElement>));
+      if(element.type==="text"&&["text","fontFamily","fontSize","fontStyle","fontWeight","sizingX","sizingY"].includes(key)){
+        const next={...element,...patch} as TextElement;
+        store.update(project=>updateElement(project,element.id,{...patch,textAdvances:captureTextAdvances(next)} as Partial<SlideElement>));
+      }else store.update(project => updateElement(project, element.id, patch as Partial<SlideElement>));
     }
   } catch (error) { alert(error instanceof Error ? error.message : String(error)); render(); }
 }
@@ -776,6 +795,14 @@ function add(kind: ElementKind): void {
   const element = createElement(kind);
   const chosen=selected().element;
   if(chosen?.type==="frame"){element.parentId=chosen.id;element.x=chosen.x+16;element.y=chosen.y+16;}
+  else if(chosen?.parentId){element.parentId=chosen.parentId;element.x=chosen.x;element.y=chosen.y+chosen.height+16;}
+  if(element.type==="text"){
+    element.sizingX="hug";element.sizingY="hug";
+    const parent=selected().slide?.elements.find(e=>e.id===element.parentId);
+    if(parent?.type==="frame"&&/^#(?:fff|ffffff)$/i.test(parent.fill??""))element.color="#111111";
+    element.textAdvances=captureTextAdvances(element);
+    Object.assign(element,fitText(element));
+  }
   store.update(project => addElement(project, slideId, element));
   canvas.select([element.id]);
 }
@@ -913,6 +940,7 @@ stage.addEventListener("dblclick", event => {
   const source = store.value.slides.flatMap(slide => slide.elements)
     .find(item => item.id === id);
   if (!source || source.type !== "text") return;
+  canvas.select([id]);
   const original = source.text;
   node.contentEditable = "true";
   node.spellcheck = true;
@@ -927,7 +955,7 @@ stage.addEventListener("dblclick", event => {
     node.style.cursor = "";
     if (!save) { node.textContent = original; return; }
     if (value !== original) {
-      try { store.update(project => updateElement(project, id, { text: value })); }
+      try { store.update(project => updateElement(project, id, { text: value,textAdvances:captureTextAdvances({...source,text:value}) })); }
       catch (error) { alert(error instanceof Error ? error.message : String(error)); }
     }
   };
@@ -963,7 +991,8 @@ window.addEventListener("keydown", event => {
   const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, .timeline-track[data-empty], [role=separator], [contenteditable='true']"));
   if (typing || player) return;
   const command = event.ctrlKey || event.metaKey;
-  const key = event.key.toLowerCase();
+  if(event.isComposing||event.getModifierState("AltGraph"))return;
+  const key = shortcutKey(event);
   if (command && key === "s") {
     event.preventDefault();
     if (sync.activeName) void sync.flush();
@@ -973,7 +1002,7 @@ window.addEventListener("keydown", event => {
   } else if (command && key === "y") {
     event.preventDefault(); store.redo();
   } else if (command && key === "a") {
-    event.preventDefault(); canvas.select(selected().slide?.elements.map(el => el.id) ?? []);
+    event.preventDefault(); const {slide,element}=selected();canvas.select(slide?.elements.filter(el=>el.parentId===element?.parentId).map(el=>el.id)??[]);
   } else if(!command&&!event.altKey&&key==="f"){event.preventDefault();frameTool.activate();
   } else if(command&&event.altKey&&key==="g"){event.preventDefault();runAction("frame-selection");
   } else if (event.shiftKey && key === "a" && !command) {
@@ -983,7 +1012,10 @@ window.addEventListener("keydown", event => {
   } else if (command && key === "d" && canvas.ids.length) {
     event.preventDefault(); runAction("duplicate");
   } else if (event.key === "Escape") {
-    if(!frameTool.cancel())canvas.clear();
+    if(!frameTool.cancel()){const parent=selected().element?.parentId;if(parent)canvas.select([parent]);else canvas.clear();}
+  } else if(event.key==="Enter"&&selected().element?.type==="frame"){
+    const children=selected().slide?.elements.filter(e=>e.parentId===selected().element?.id)??[];
+    if(children.length){event.preventDefault();canvas.select([children[0]!.id]);}
   } else if ((event.key === "Delete" || event.key === "Backspace") && canvas.ids.length) {
     event.preventDefault(); runAction("delete");
   } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key) && canvas.ids.length) {
@@ -997,7 +1029,12 @@ window.addEventListener("keydown", event => {
       if (ids.includes(el.id)) patches[el.id] = { x: el.x + dx, y: el.y + dy };
     }
     const slide = selected().slide;
-    if (slide?.layout && slide.elements.some(e => ids.includes(e.id) && isFlowElement(slide,e))) {
+    const current=selected().element;
+    if(slide&&current?.parentId&&isManaged(slide,current)&&ids.length===1){
+      const layout=parentLayout(slide,current)!;const axis=layout.direction==="row"?dx:dy;
+      const siblings=slide.elements.filter(e=>e.parentId===current.parentId&&isManaged(slide,e));const other=siblings[siblings.indexOf(current)+(axis<0?-1:1)];
+      if(axis&&other)store.update(p=>reorderFrameChild(p,slide.id,current.id,(layout.direction==="row"?other.x+other.width/2:other.y+other.height/2)+(axis<0?-.01:.01)));
+    } else if (slide?.layout && slide.elements.some(e => ids.includes(e.id) && isFlowElement(slide,e))) {
       const axis = slide.layout.direction === "row" ? dx : dy;
       if (axis) store.update(project => stepLayoutOrder(project, slide.id, ids, axis < 0 ? -1 : 1));
     } else store.update(project => updateElements(project, patches));

@@ -1,4 +1,7 @@
 const paths: Record<string,string> = {
+  textWidth: '<path d="M5 5v14M19 5v14M8 12h8m-6-2-2 2 2 2m4-4 2 2-2 2"/>',
+  textHeight: '<path d="M5 5h14M5 19h14M12 8v8m-2-6 2-2 2 2m-4 4 2 2 2-2"/>',
+  textFixed: '<rect x="5" y="5" width="14" height="14" rx="1"/><path d="M8 9h8M12 9v6"/>',
   free: '<rect x="5" y="5" width="5" height="5" rx="1"/><rect x="14" y="9" width="5" height="5" rx="1"/><rect x="8" y="15" width="5" height="5" rx="1"/>',
   column: '<rect x="5" y="4" width="6" height="6" rx="1"/><rect x="5" y="14" width="6" height="6" rx="1"/><path d="M17 5v14m-3-3 3 3 3-3"/>',
   row: '<rect x="4" y="5" width="6" height="6" rx="1"/><rect x="14" y="5" width="6" height="6" rx="1"/><path d="M5 17h14m-3-3 3 3-3 3"/>',

@@ -429,6 +429,21 @@ try {
   await page.locator('select[data-field="sizingX"]').selectOption("hug",{force:true});
   check(await page.locator('select[data-field="sizingX"]').inputValue()==="hug","Hug frame sizing can be selected");
   if(process.env.STUDIO_THEME_SCREENSHOTS)await page.screenshot({path:process.env.STUDIO_THEME_SCREENSHOTS+"-frame.png"});
+  await page.locator("#add-slide").click();
+  await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent("keydown",{code:"KeyF",key:"а",bubbles:true})));
+  check(await page.locator("#add-frame").getAttribute("aria-pressed")==="true","Frame shortcut uses physical key on Russian keyboard");
+  await page.keyboard.press("Escape");
+  await page.locator("#add-text").click();
+  const originalTextWidth=Number(await page.locator('input[data-field="width"]').inputValue());
+  await page.locator('textarea[data-field="text"]').fill("A much longer line of text for auto width");
+  await page.locator('textarea[data-field="text"]').blur();
+  check(Number(await page.locator('input[data-field="width"]').inputValue())>originalTextWidth,"Auto width grows with text");
+  await page.locator('[data-action="text-auto-height"]').click();
+  await page.locator('input[data-field="width"]').fill("120");
+  await page.locator('input[data-field="width"]').blur();
+  check(Number(await page.locator('input[data-field="height"]').inputValue())>130,"Auto height wraps text at fixed width");
+  await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent("keydown",{code:"KeyD",key:"в",ctrlKey:true,bubbles:true})));
+  check(await page.locator("#editor-stage .cp-text").count()===2,"Duplicate shortcut works with Cyrillic key");
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

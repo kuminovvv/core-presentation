@@ -1,4 +1,4 @@
-import { rootSelection } from "../src/core/frames";
+import { rootSelection, pickFrameLayer, descendants } from "../src/core/frames";
 import type { Presentation, SlideElement } from "../src/core/types";
 import {
   hitByMarquee, resizeElements, rotateElements, shiftElements, snapMove,
@@ -10,7 +10,7 @@ interface EditorHooks {
   project(): Presentation;
   slideId(): string;
   scale(): number;
-  commit(patches: Record<string, GeometryPatch>, mode: Mode): void;
+  commit(patches: Record<string, GeometryPatch>, mode: Mode, point:{x:number;y:number}): void;
   selectionChanged(): void;
 }
 
@@ -108,7 +108,9 @@ export class CanvasInteractions {
     }
 
     if (node?.dataset.elementId) {
-      const element = this.elements().find(e => e.id === node.dataset.elementId);
+      const slide=this.hooks.project().slides.find(s=>s.id===this.hooks.slideId());
+      const id=slide?pickFrameLayer(slide,node.dataset.elementId,this.ids,event.ctrlKey||event.metaKey):node.dataset.elementId;
+      const element = this.elements().find(e => e.id === id);
       if (!element) return;
       const affected = element.groupId
         ? this.elements().filter(e => e.groupId === element.groupId).map(e => e.id)
@@ -185,7 +187,8 @@ export class CanvasInteractions {
 
     if (gesture.mode === "move") {
       if (!gesture.box || !gesture.viewport) return;
-      const moving = new Set(gesture.origin.map(s => s.id));
+      const slide=this.hooks.project().slides.find(s=>s.id===this.hooks.slideId());
+      const moving = slide?descendants(slide,gesture.origin.map(s=>s.id)):new Set(gesture.origin.map(s=>s.id));
       const other = (gesture.all ?? []).filter(e => !moving.has(e.id));
       const snapped = event.altKey ? { dx, dy, guides: {} } :
         snapMove(gesture.box, dx, dy, gesture.viewport.width, gesture.viewport.height, other);
@@ -219,7 +222,7 @@ export class CanvasInteractions {
     }
     if (gesture.didMove && Object.keys(patches).length) {
       // Revert DOM preview before committing a single undoable operation.
-      this.hooks.commit(patches, gesture.mode);
+      this.hooks.commit(patches, gesture.mode,this.point(event));
     } else {
       this.refresh();
     }

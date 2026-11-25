@@ -105,6 +105,7 @@ export function validatePresentation(input: unknown): asserts input is Presentat
         if (element.groupId !== undefined && (!str(element.groupId) || !element.groupId.trim()))
           fail(p + ".groupId", "must be a non-empty string");
         if (element.type === "text" && !str(element.text)) fail(p + ".text", "required string");
+        if(element.type==="text"&&element.textAdvances!==undefined&&(!obj(element.textAdvances)||Object.keys(element.textAdvances).length>2048||Object.entries(element.textAdvances).some(([k,v])=>Array.from(k).length!==1||!num(v)||(v as number)<0||(v as number)>10)))fail(p+".textAdvances","invalid font metrics");
         if (element.type === "image" && !str(element.src)) fail(p + ".src", "required string");
         if (element.type === "html" && !str(element.html)) fail(p + ".html", "required string");
         if (element.animation !== undefined) {

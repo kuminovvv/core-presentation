@@ -1,6 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {createPresentation,createSlide,createElement,addSlide,updateElement,duplicateElements,deleteElement,duplicateSlide} from "../src/core/document";
-import {insertFrame,reorderFrameChild} from "../src/core/frames";
+import {insertFrame,reorderFrameChild,pickFrameLayer,frameAtPoint} from "../src/core/frames";
+import {shortcutKey} from "../web/shortcuts";
 import {validatePresentation} from "../src/core/validation";
 import {reflowPresentation,defaultSlideLayout} from "../src/core/auto-layout";
 import type {FrameElement} from "../src/core/types";
@@ -23,6 +24,27 @@ describe("native frames",()=>{
    p=updateElement(p,"child",{sizingX:"fill",sizingY:"fill"});
    const child=p.slides[0]!.elements.find(e=>e.id==="child")!;
    expect([child.width,child.height]).toEqual([280,170]);
+ });
+ it("physical shortcuts work in Cyrillic layouts",()=>{
+   expect(shortcutKey({code:"KeyF",key:"а"})).toBe("f");
+   expect(shortcutKey({code:"KeyZ",key:"я"})).toBe("z");
+   expect(shortcutKey({code:"KeyA",key:"ф"})).toBe("a");
+ });
+ it("selects the container before drilling into children and hit-tests the pointer",()=>{
+   const s=make().slides[0]!;
+   expect(pickFrameLayer(s,"child",[])).toBe("frame");
+   expect(pickFrameLayer(s,"child",["frame"])).toBe("child");
+   expect(pickFrameLayer(s,"child",[],true)).toBe("child");
+   expect(frameAtPoint(s,{x:50,y:50})?.id).toBe("frame");
+ });
+ it("hugs measured text and recomputes on editing",()=>{
+   let p=make();const s=p.slides[0]!;
+   s.elements[0]={id:"child",type:"text",parentId:"frame",text:"aa",x:30,y:40,width:440,height:130,fontSize:20,lineHeight:1.2,sizingX:"hug",sizingY:"hug",textAdvances:{a:.5}};
+   p=updateElement(p,"frame",{layout:{...defaultSlideLayout,paddingX:10,paddingY:10},sizingX:"hug",sizingY:"hug"});
+   expect(p.slides[0]!.elements[0]!.width).toBe(20);
+   expect(p.slides[0]!.elements.find(e=>e.id==="frame")!.width).toBe(40);
+   p=updateElement(p,"child",{text:"aaaaaa"});
+   expect(p.slides[0]!.elements.find(e=>e.id==="frame")!.width).toBe(80);
  });
  it("rejects cyclic parents",()=>{const p=make();expect(()=>updateElement(p,"frame",{parentId:"frame"})).toThrow("invalid frame ancestry");});
 });

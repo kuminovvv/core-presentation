@@ -38,6 +38,7 @@ export interface TextElement extends ElementBase {
   type: "text"; text: string; color?: string; fontFamily?: string;
   fontSize?: number; fontWeight?: number; align?: "left" | "center" | "right";
   lineHeight?: number; fontStyle?: "normal" | "italic";
+  textAdvances?: Record<string,number>;
 }
 export interface ShapeElement extends ElementBase {
   type: "shape"; fill?: string; borderRadius?: number; border?: string; boxShadow?: string;

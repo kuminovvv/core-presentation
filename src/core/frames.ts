@@ -67,3 +67,19 @@ export function reorderFrameChild(project:Presentation,slideId:string,elementId:
   const index=target?ordered.indexOf(target):last?ordered.indexOf(last)+1:ordered.length;
   ordered.splice(index,0,item);slide.elements=ordered;return next;
 }
+
+export function pickFrameLayer(slide:Slide,id:string,selected:readonly string[],deep=false):string{
+  if(deep)return id;
+  const chain:string[]=[id],byId=new Map(slide.elements.map(e=>[e.id,e]));
+  let parent=byId.get(id)?.parentId;
+  while(parent&&byId.has(parent)&&!chain.includes(parent)){chain.unshift(parent);parent=byId.get(parent)?.parentId;}
+  for(let i=chain.length-2;i>=0;i--)if(selected.includes(chain[i]!))return chain[i+1]!;
+  for(const current of selected){const scope=byId.get(current)?.parentId;const i=scope?chain.indexOf(scope):-1;if(i>=0&&i<chain.length-1)return chain[i+1]!;}
+  return chain[0]!;
+}
+export function frameAtPoint(slide:Slide,point:{x:number;y:number},exclude:ReadonlySet<string>=new Set()):FrameElement|undefined{
+  const candidates=slide.elements.filter((e):e is FrameElement=>e.type==="frame"&&!exclude.has(e.id)&&point.x>=e.x&&point.x<=e.x+e.width&&point.y>=e.y&&point.y<=e.y+e.height);
+  const byId=new Map(slide.elements.map(e=>[e.id,e]));
+  const depth=(e:SlideElement)=>{let n=0,p=e.parentId;while(p&&n<32){n++;p=byId.get(p)?.parentId;}return n;};
+  return candidates.sort((a,b)=>(b.zIndex??0)-(a.zIndex??0)||depth(b)-depth(a)||slide.elements.indexOf(b)-slide.elements.indexOf(a))[0];
+}
