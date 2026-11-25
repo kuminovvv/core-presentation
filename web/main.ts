@@ -240,8 +240,8 @@ function render(): void {
     row.dataset.slideId = slide.id;
     row.className = "slide-row" + (slide.id === slideId ? " active" : "");
     row.innerHTML = `<span class="slide-number">${String(index + 1).padStart(2,"0")}</span>
-      <span class="slide-thumb" style="background:${escape(slide.background)}"><span>${escape(slide.name)}</span></span>
-      <span class="slide-title">${escape(slide.name)}</span>`;
+      <span class="slide-title" title="${escape(slide.name)}">${escape(slide.name)}</span>
+      <span class="slide-thumb" style="background:${escape(slide.background)}"><span>${escape(slide.name)}</span></span>`;
     row.addEventListener("click", () => { slideId = slide.id; canvas.clear(); render(); });
     row.addEventListener("dragstart", event => {
       event.dataTransfer?.setData("text/plain", slide.id);

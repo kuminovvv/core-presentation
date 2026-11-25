@@ -55,6 +55,15 @@ try {
   const originalWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
   const rightWidth = await page.locator("#inspector-panel").evaluate(el => el.getBoundingClientRect().width);
   check(Math.abs(originalWidth - rightWidth) < 1, "Side panels have equal default widths");
+  const slideCardLayout = await page.locator(".slide-row").first().evaluate(row => {
+    const number=row.querySelector(".slide-number").getBoundingClientRect();
+    const title=row.querySelector(".slide-title").getBoundingClientRect();
+    const thumb=row.querySelector(".slide-thumb").getBoundingClientRect();
+    return Math.abs((number.top+number.bottom)/2-(title.top+title.bottom)/2)<1 &&
+      title.left>=number.right && thumb.top>=Math.max(number.bottom,title.bottom) &&
+      Math.abs(thumb.left-number.left)<1 && Math.abs(thumb.right-title.right)<1;
+  });
+  check(slideCardLayout,"Slide number and title share one header above the full-width thumbnail");
   const gaps = await page.evaluate(() => {
     const a = document.querySelector("#slides-panel").getBoundingClientRect();
     const b = document.querySelector(".workspace").getBoundingClientRect();
