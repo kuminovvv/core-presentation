@@ -345,3 +345,11 @@ button:focus-visible,summary:focus-visible,label.button:focus-within,input:focus
 .frame-section .layout-flow-row,.frame-section .layout-alignment-row,.frame-section .layout-padding-row{margin-top:-4px}
 .frame-section .layout-heading{display:none}
 .frame-section .layout-label{margin-bottom:-3px}
+
+/* Keep the gap mode beside its value, as in the reference inspector. */
+.gap-control{flex-direction:row;align-items:stretch;gap:2px;background:var(--muted);border-radius:7px}
+.gap-control>.icon-number{flex:1;min-width:0;gap:4px;padding-inline:4px}
+.gap-control>.studio-select{width:30px;flex:none}
+.gap-control .studio-select-component>button{height:30px;min-height:30px;border:0;background:transparent;padding:0;justify-content:center}
+.gap-control .studio-select-component>button>span{display:none}
+.gap-control>.icon-number>span{font-size:12px;color:var(--foreground)}

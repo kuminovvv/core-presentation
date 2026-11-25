@@ -15,5 +15,14 @@ describe("native frames",()=>{
  it("reflows inside frame",()=>{const p=updateElement(make(),"frame",{layout:{...defaultSlideLayout,paddingX:12,paddingY:16}});expect(p.slides[0]!.elements[0]!.x).toBe(22);expect(p.slides[0]!.elements[0]!.y).toBe(36);expect(reflowPresentation(p)).toEqual(p);});
  it("copies hierarchy and removes descendants",()=>{const p=make(),s=p.slides[0]!;const d=duplicateElements(p,s.id,["frame"]);validatePresentation(d.project);expect(d.project.slides[0]!.elements).toHaveLength(4);expect(deleteElement(p,"frame").slides[0]!.elements).toHaveLength(0);validatePresentation(duplicateSlide(p,s.id));});
  it("reorders direct children by coordinate",()=>{let p=make();p.slides[0]!.elements.push({...createElement("shape"),id:"second",parentId:"frame",x:60,y:40,width:40,height:50});p=updateElement(p,"frame",{layout:{...defaultSlideLayout,direction:"row",paddingX:10,paddingY:10,gap:10}});p=reflowPresentation(reorderFrameChild(p,p.slides[0]!.id,"child",1000));expect(p.slides[0]!.elements.filter(e=>e.parentId==="frame").map(e=>e.id)).toEqual(["second","child"]);});
+ it("hugs fixed children and distributes fill children inside a frame",()=>{
+   let p=make();p=updateElement(p,"frame",{layout:{...defaultSlideLayout,direction:"row",paddingX:10,paddingY:15},sizingX:"hug",sizingY:"hug"});
+   let frame=p.slides[0]!.elements.find(e=>e.id==="frame")!;
+   expect([frame.width,frame.height]).toEqual([60,80]);
+   p=updateElement(p,"frame",{width:300,height:200,sizingX:"fixed",sizingY:"fixed"});
+   p=updateElement(p,"child",{sizingX:"fill",sizingY:"fill"});
+   const child=p.slides[0]!.elements.find(e=>e.id==="child")!;
+   expect([child.width,child.height]).toEqual([280,170]);
+ });
  it("rejects cyclic parents",()=>{const p=make();expect(()=>updateElement(p,"frame",{parentId:"frame"})).toThrow("invalid frame ancestry");});
 });

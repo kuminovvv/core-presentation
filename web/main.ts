@@ -334,10 +334,10 @@ function layoutControls(slide: Slide, project: Presentation, dimensions=""): str
     '</div>'+iconButton("layout-padding-individual","Раздельные отступы","paddingAll",!!individual)+'</div>'+
     (layoutOverflows(slide,project.viewport)?'<div class="layout-warning" role="status">Объекты выходят за границы макета.</div>':''):'');
 }
-function sizeControl(e:SlideElement,axis:"X"|"Y",managed:boolean):string{
+function sizeControl(e:SlideElement,axis:"X"|"Y",managed:boolean,showNumber=true):string{
   const key=axis==="X"?"width":"height",mode=axis==="X"?"sizingX":"sizingY";
   const hug=e.type==="frame"&&!!e.layout;
-  return '<div class="layout-size"><label class="frame-number"><span>'+(axis==="X"?"W":"H")+'</span><input type="number" min="1" aria-label="'+(axis==="X"?"Ширина":"Высота")+'" data-field="'+key+'" value="'+e[key]+'"></label>'+
+  return '<div class="layout-size">'+(showNumber?'<label class="frame-number"><span>'+(axis==="X"?"W":"H")+'</span><input type="number" min="1" aria-label="'+(axis==="X"?"Ширина":"Высота")+'" data-field="'+key+'" value="'+e[key]+'"></label>':'<span class="layout-label">'+(axis==="X"?"Width":"Height")+'</span>')+
     (hug||managed?'<select data-field="'+mode+'" aria-label="Режим размера '+axis+'"><option value="fixed"'+((e[mode]??"fixed")==="fixed"?' selected':'')+'>Fixed</option>'+(hug?'<option value="hug"'+(e[mode]==="hug"?' selected':'')+'>Hug</option>':'')+(managed?'<option value="fill"'+(e[mode]==="fill"?' selected':'')+'>Fill</option>':'')+'</select>':'')+'</div>';
 }
 function iconNumber(label:string,key:string,value:number,icon:string):string{
@@ -348,7 +348,7 @@ function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
   const flowing=elements.every(e=>isManaged(slide,e));
   return '<div class="property-section layout-heading"><span>Auto Layout</span>'+iconButton(flowing?"layout-absolute":"layout-flow",flowing?"Абсолютная позиция":"Вернуть в поток","absolute",!flowing)+'</div>'+
     '<div class="layout-control-row"><span>'+(flowing?"В потоке":"Абсолютно")+'</span><div class="icon-segment">'+
-    iconButton("layout-settings","Настройки макета","column")+'</div></div>'+(flowing&&elements.length===1&&elements[0]?.type!=="frame"?'<div class="field-grid">'+sizeControl(elements[0],"X",true)+sizeControl(elements[0],"Y",true)+'</div>':'');
+    iconButton("layout-settings","Настройки макета","column")+'</div></div>'+(flowing&&elements.length===1&&elements[0]?.type!=="frame"?'<div class="field-grid">'+sizeControl(elements[0]!,"X",true,false)+sizeControl(elements[0]!,"Y",true,false)+'</div>':'');
 }
 function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
   const layoutSlide:Slide={...slide,layout:e.layout,elements:slide.elements.filter(child=>child.parentId===e.id).map(child=>({...child,parentId:undefined,x:child.x-e.x,y:child.y-e.y}))};

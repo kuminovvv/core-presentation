@@ -417,6 +417,17 @@ try {
   check(await page.locator("#editor-stage .cp-frame").evaluate(el=>getComputedStyle(el).overflow)==="visible","Clip content can be toggled");
   await page.locator('[data-action="frame-align-left"]').click();
   check(await page.locator("#editor-stage .cp-frame").evaluate(el=>parseFloat(el.style.left))===0,"Frame aligns to slide edge");
+  await page.locator('[data-action="layout-direction-grid"]').click();
+  check(await page.locator('[data-action="layout-direction-grid"]').getAttribute("aria-pressed")==="true","Grid flow is available");
+  await page.locator('[data-action="layout-direction-row"]').click();
+  await page.locator('[data-action="layout-wrap"]').click();
+  check(await page.locator('[data-action="layout-wrap"]').getAttribute("aria-pressed")==="true","Horizontal wrap toggles");
+  await page.locator('select[data-field="layoutGapMode"]').selectOption("auto",{force:true});
+  check(await page.locator(".gap-control").innerText().then(t=>t.includes("Auto")),"Auto gap is displayed");
+  await page.locator('[data-action="layout-padding-individual"]').click();
+  check(await page.locator('input[data-field="layoutPaddingLeft"]').isVisible(),"Individual padding is available");
+  await page.locator('select[data-field="sizingX"]').selectOption("hug",{force:true});
+  check(await page.locator('select[data-field="sizingX"]').inputValue()==="hug","Hug frame sizing can be selected");
   if(process.env.STUDIO_THEME_SCREENSHOTS)await page.screenshot({path:process.env.STUDIO_THEME_SCREENSHOTS+"-frame.png"});
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
