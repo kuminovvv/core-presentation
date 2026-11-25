@@ -31,6 +31,10 @@ const transition = z.strictObject({
 });
 const slideLayout = z.strictObject({
   direction: z.enum(["row", "column"]),
+  wrap:z.boolean().optional(),gridColumns:z.number().int().min(1).max(50).optional(),
+  crossGap:z.number().min(0).max(10000).optional(),
+  paddingTop:z.number().min(0).max(10000).optional(),paddingRight:z.number().min(0).max(10000).optional(),paddingBottom:z.number().min(0).max(10000).optional(),paddingLeft:z.number().min(0).max(10000).optional(),
+  packedJustify:z.enum(["start","center","end"]).optional(),
   gap: z.number().finite().min(0).max(10000),
   paddingX: z.number().finite().min(0).max(10000),
   paddingY: z.number().finite().min(0).max(10000),
@@ -40,6 +44,7 @@ const slideLayout = z.strictObject({
 const patchSchema = z.strictObject({
   layoutPosition: z.enum(["flow", "absolute"]).optional(),
   parentId: id.optional(),
+  sizingX:z.enum(["fixed","hug","fill"]).optional(),sizingY:z.enum(["fixed","hug","fill"]).optional(),
   name:z.string().max(250).optional(),clipContent:z.boolean().optional(),layout:slideLayout.optional(),
   x: position.optional(), y: position.optional(),
   width: dimension.optional(), height: dimension.optional(),
@@ -77,7 +82,7 @@ const elementTypes: Record<SlideElement["type"], Set<string>> = {
   html: new Set(["html", "css", "javascript"]),
 };
 const universalProperties = new Set([
-  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId", "layoutPosition", "parentId",
+  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId", "layoutPosition", "parentId", "sizingX", "sizingY",
 ]);
 
 function validatePatch(element: SlideElement, patch: Patch): void {

@@ -54,6 +54,20 @@ describe("slide auto layout", () => {
     p.slides[0]!.layout!.justify="space-between";
     expect(reflowPresentation(p).slides[0]!.elements[1]!.x).toBe(310);
   });
+  it("auto gap replaces manual gap even when available space is smaller",()=>{
+    const p=make(),s=p.slides[0]!;p.viewport.width=350;s.layout={...s.layout!,gap:100,justify:"space-between"};
+    expect(reflowPresentation(p).slides[0]!.elements[1]!.x).toBe(160);
+  });
+  it("wraps and supports separate side paddings",()=>{
+    const p=make(),s=p.slides[0]!;p.viewport.width=250;s.layout={...s.layout!,wrap:true,crossGap:12,paddingLeft:10,paddingRight:20,paddingTop:5,paddingBottom:15};
+    expect(reflowPresentation(p).slides[0]!.elements.map(e=>[e.x,e.y])).toEqual([[10,5],[10,97]]);
+  });
+  it("supports grid and fill sizes",()=>{
+    const p=make(),s=p.slides[0]!;s.layout={...s.layout!,gridColumns:1,crossGap:10};
+    expect(reflowPresentation(p).slides[0]!.elements[1]!.y).toBe(120);
+    s.layout.gridColumns=undefined;s.elements[0]!.sizingX="fill";
+    expect(reflowPresentation(p).slides[0]!.elements[0]!.width).toBe(250);
+  });
   it("preserves free positioning and validates serializable layout", () => {
     const p=make(),s=p.slides[0]!;
     expect(parsePresentation(serializePresentation(p))).toEqual(p);

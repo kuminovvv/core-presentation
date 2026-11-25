@@ -318,3 +318,30 @@ button:focus-visible,summary:focus-visible,label.button:focus-within,input:focus
 .frame-fill .field{flex:1;min-width:0;}
 .frame-fill>input[type=color]{width:28px;height:32px;padding:2px;border:1px solid var(--border);background:var(--muted);border-radius:7px;flex:none;}
 .frame-fill .icon-control{flex:none;}
+
+/* Auto Layout: compact full-width flow, dimensions, alignment/gap and padding. */
+.layout-label{font-size:11px;color:var(--muted-foreground);line-height:1.2}
+.layout-flow-row,.layout-padding-row{display:flex;gap:6px;align-items:center;min-width:0}
+.layout-flow{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:7px;padding:2px;gap:1px}
+.layout-flow .icon-control{width:100%;min-width:0;height:28px;border-radius:5px}
+.layout-flow .icon-control[aria-pressed=true]{box-shadow:none;background:var(--surface-raised);outline:1px solid var(--border)}
+.layout-flow-row>.icon-control,.layout-padding-row>.icon-control{flex:none;width:26px;min-width:26px}
+.layout-padding-row>.field-grid{flex:1;min-width:0}
+.layout-control-stack,.layout-spacing{display:flex;flex-direction:column;gap:5px;min-width:0}
+.layout-alignment-row{gap:8px;grid-template-columns:1fr 1fr}
+.layout-alignment{min-height:64px;gap:1px;padding:3px;border:0;border-radius:7px}
+.layout-dot span{width:3px;height:3px}
+.layout-dot[aria-pressed=true]{background:transparent}
+.layout-dot[aria-pressed=true] span{width:16px;height:12px;background:transparent;position:relative;border-radius:0}
+.layout-dot[aria-pressed=true] span:before,.layout-dot[aria-pressed=true] span:after{content:"";position:absolute;background:var(--primary);border-radius:1px}
+.layout-dot.axis-row[aria-pressed=true] span:before{width:3px;height:10px;left:4px;top:1px}
+.layout-dot.axis-row[aria-pressed=true] span:after{width:3px;height:7px;left:9px;top:1px}
+.layout-dot.axis-column[aria-pressed=true] span:before{width:10px;height:3px;top:2px;left:3px}
+.layout-dot.axis-column[aria-pressed=true] span:after{width:7px;height:3px;top:7px;left:3px}
+.gap-control,.layout-size{display:flex;flex-direction:column;gap:4px;min-width:0}
+.layout-spacing .icon-number,.layout-padding-row .icon-number{border-radius:7px;padding:0 6px;min-height:30px;border:0}
+.layout-spacing .icon-number input,.layout-padding-row .icon-number input{height:30px}
+.layout-spacing .studio-select-component>button,.layout-size .studio-select-component>button{height:27px;min-height:27px;padding:0 7px;border-radius:6px;font-size:11px}
+.frame-section .layout-flow-row,.frame-section .layout-alignment-row,.frame-section .layout-padding-row{margin-top:-4px}
+.frame-section .layout-heading{display:none}
+.frame-section .layout-label{margin-bottom:-3px}

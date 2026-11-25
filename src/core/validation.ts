@@ -46,10 +46,17 @@ export function validatePresentation(input: unknown): asserts input is Presentat
           fail(path + ".transition.duration", "must be non-negative");
       }
       if (!Array.isArray(slide.elements)) { fail(path + ".elements", "required array"); return; }
+      const extraLayout=(l:Record<string,unknown>,p:string)=>{
+        for(const k of ["crossGap","paddingTop","paddingRight","paddingBottom","paddingLeft"])if(l[k]!==undefined&&(!num(l[k])||(l[k] as number)<0||(l[k] as number)>10000))fail(p+"."+k,"invalid spacing");
+        if(l.wrap!==undefined&&typeof l.wrap!=="boolean")fail(p+".wrap","must be boolean");
+        if(l.gridColumns!==undefined&&(!num(l.gridColumns)||!Number.isInteger(l.gridColumns)||(l.gridColumns as number)<1||(l.gridColumns as number)>50))fail(p+".gridColumns","must be integer 1–50");
+        if(l.packedJustify!==undefined&&!oneOf(l.packedJustify,["start","center","end"]))fail(p+".packedJustify","invalid alignment");
+      };
       if (slide.layout !== undefined) {
         if (!obj(slide.layout)) fail(path + ".layout", "must be an object");
         else {
           const layout = slide.layout;
+          extraLayout(layout,path+".layout");
           if (!oneOf(layout.direction, ["row","column"])) fail(path + ".layout.direction", "unknown direction");
           if (!oneOf(layout.align, ["start","center","end"])) fail(path + ".layout.align", "unknown alignment");
           if (!oneOf(layout.justify, ["start","center","end","space-between"])) fail(path + ".layout.justify", "unknown distribution");
@@ -85,11 +92,13 @@ export function validatePresentation(input: unknown): asserts input is Presentat
             fail(p + "." + key, "must be finite");
         }
         if (element.parentId !== undefined && (!str(element.parentId)||!element.parentId.trim())) fail(p+".parentId","required frame ID");
+        for(const k of ["sizingX","sizingY"])if(element[k]!==undefined&&!oneOf(element[k],["fixed","hug","fill"]))fail(p+"."+k,"invalid sizing");
         if(element.type==="frame"){
           if(element.rotation!==undefined&&element.rotation!==0)fail(p+".rotation","frame rotation is not supported");
           if(element.clipContent!==undefined&&typeof element.clipContent!=="boolean")fail(p+".clipContent","must be boolean");
           for(const key of ["name","fill","border","boxShadow"])if(element[key]!==undefined&&!str(element[key]))fail(p+"."+key,"must be string");
           if(element.borderRadius!==undefined&&(!num(element.borderRadius)||element.borderRadius<0))fail(p+".borderRadius","must be non-negative");
+          if(obj(element.layout))extraLayout(element.layout,p+".layout");
           if(element.layout!==undefined){const l=element.layout;if(!obj(l)||!oneOf(l.direction,["row","column"])||!oneOf(l.align,["start","center","end"])||!oneOf(l.justify,["start","center","end","space-between"]))fail(p+".layout","invalid frame layout");else for(const k of ["gap","paddingX","paddingY"])if(!num(l[k])||(l[k] as number)<0||(l[k] as number)>10000)fail(p+".layout."+k,"invalid spacing");}
         }
         if (element.layoutPosition !== undefined && !oneOf(element.layoutPosition, ["flow","absolute"])) fail(p + ".layoutPosition", "unknown positioning mode");

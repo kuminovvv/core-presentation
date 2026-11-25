@@ -18,6 +18,10 @@ Right-click an object on the canvas or use the inspector's three-dot menu for gr
 
 Press F or click Frame and drag on the canvas; click for a default-size frame. Ctrl+Alt+G wraps selected siblings in a transparent frame. Frames contain real nested elements and can have their own horizontal/vertical Auto Layout, fixed dimensions, clip content, fill, stroke and shadow. Add elements while a frame is selected or drag a single object fully inside a frame to nest it. Use the Layers list to select a frame or child. Frame coordinates in JSON remain slide-relative; parentId records hierarchy. Frame rotation, wrap/grid, Hug/Fill sizing and morph between frame-containing slides are not yet supported (such slides use fade instead).
 
+## Layout controls
+
+Flow includes freeform, vertical, horizontal and a fixed-column grid. Horizontal flow supports wrap. Auto gap distributes available space instead of adding the manual gap; individual side padding is optional. Frame Hug uses the measured bounds of fixed-size children, and Fill allocates remaining space in a managed parent. Grid uses content-sized tracks, not Figma's full track editor. Text intrinsic measurement, min/max constraints and full Figma sizing-cycle rules are not implemented.
+
 ## Slide Auto Layout
 
 Clear selection to open slide properties, then choose **Auto Layout → Направление**. Horizontal and vertical modes arrange editable objects in document order with gap, horizontal/vertical padding, cross-axis alignment, and main-axis distribution (including space-between). Drag managed objects along the layout axis to reorder, or use the inspector's Earlier/Later controls. Grouped objects are treated as one item. Switch any selected object/group to absolute positioning to place decorative overlays freely. Geometry reflows when item dimensions or membership change and is stored in the same document for preview, HTML/PDF and MCP. Switch back to Free to keep the current positions without automatic arrangement.

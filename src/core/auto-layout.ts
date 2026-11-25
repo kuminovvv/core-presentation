@@ -33,32 +33,80 @@ const round = (n: number) => Math.round(n * 100) / 100;
 function alignment(free: number, value: "start" | "center" | "end" | "space-between"): number {
   return value === "center" ? Math.max(0, free) / 2 : value === "end" ? Math.max(0, free) : 0;
 }
-/** Deterministic, fixed-size flex-like layout, independent of browser or font metrics. */
-function resolveFlat(slide: Slide, viewport: Viewport): Slide {
-  const layout = slide.layout;
-  if (!layout) return slide;
-  const flow = units(slide);
-  if (!flow.length) return slide;
-  const row = layout.direction === "row";
-  const mainPad = row ? layout.paddingX : layout.paddingY;
-  const crossPad = row ? layout.paddingY : layout.paddingX;
-  const main = Math.max(0, (row ? viewport.width : viewport.height) - 2 * mainPad);
-  const cross = Math.max(0, (row ? viewport.height : viewport.width) - 2 * crossPad);
-  const size = (u: Unit) => row ? u.width : u.height;
-  const crossSize = (u: Unit) => row ? u.height : u.width;
-  const occupied = flow.reduce((total, u) => total + size(u), 0) + layout.gap * (flow.length - 1);
-  const spare = Math.max(0, main - occupied);
-  const gap = layout.gap + (layout.justify === "space-between" && flow.length > 1 ? spare / (flow.length - 1) : 0);
-  let cursor = mainPad + alignment(main - occupied, layout.justify);
-  const positions = new Map<string, { x: number; y: number }>();
-  for (const u of flow) {
-    const crossAt = crossPad + alignment(cross - crossSize(u), layout.align);
-    const x = row ? cursor : crossAt;
-    const y = row ? crossAt : cursor;
-    for (const e of u.elements) positions.set(e.id, { x: round(x + (e.x - u.x)), y: round(y + (e.y - u.y)) });
-    cursor += size(u) + gap;
+export function layoutPadding(l:SlideLayout){
+  return {left:l.paddingLeft??l.paddingX,right:l.paddingRight??l.paddingX,top:l.paddingTop??l.paddingY,bottom:l.paddingBottom??l.paddingY};
+}
+type Placement={x:number;y:number;width:number;height:number};
+function arrangeFlat(slide:Slide,viewport:Viewport,hugX=false,hugY=false){
+  const l=slide.layout!, p=layoutPadding(l),flow=units(slide),row=l.direction==="row";
+  const mainPad=row?p.left:p.top,crossPad=row?p.top:p.left;
+  const main=Math.max(0,(row?viewport.width-p.left-p.right:viewport.height-p.top-p.bottom));
+  const cross=Math.max(0,(row?viewport.height-p.top-p.bottom:viewport.width-p.left-p.right));
+  const mainHug=row?hugX:hugY,crossHug=row?hugY:hugX;
+  const size=(u:Unit)=>row?u.width:u.height, cs=(u:Unit)=>row?u.height:u.width;
+  const fill=(u:Unit,axis:"x"|"y")=>u.elements.length===1&&u.elements[0]![axis==="x"?"sizingX":"sizingY"]==="fill";
+  const mainFill=(u:Unit)=>!mainHug&&fill(u,row?"x":"y");
+  const crossFill=(u:Unit)=>!crossHug&&fill(u,row?"y":"x");
+  const positions=new Map<string,Placement>();
+  function put(u:Unit,x:number,y:number,w=u.width,h=u.height){
+    for(const e of u.elements)positions.set(e.id,{x:round(x+e.x-u.x),y:round(y+e.y-u.y),width:round(u.elements.length===1?w:e.width),height:round(u.elements.length===1?h:e.height)});
   }
-  return { ...slide, elements: slide.elements.map(e => positions.has(e.id) ? { ...e, ...positions.get(e.id)! } : e) };
+  const crossGap=l.crossGap??l.gap;
+  let contentW=0,contentH=0;
+  if(l.gridColumns){
+    const cols=Math.max(1,Math.min(l.gridColumns,flow.length||1));
+    const rows=Math.ceil(flow.length/cols);
+    const widths=Array.from({length:cols},(_,i)=>Math.max(1,...flow.filter((_,j)=>j%cols===i).map(u=>u.width)));
+    const heights=Array.from({length:rows},(_,i)=>Math.max(1,...flow.slice(i*cols,(i+1)*cols).map(u=>u.height)));
+    contentW=widths.reduce((s,n)=>s+n,0)+Math.max(0,cols-1)*l.gap;
+    contentH=heights.reduce((s,n)=>s+n,0)+Math.max(0,rows-1)*crossGap;
+    const x0=p.left+alignment(hugX?0:viewport.width-p.left-p.right-contentW,l.justify);
+    const y0=p.top+alignment(hugY?0:viewport.height-p.top-p.bottom-contentH,l.align);
+    flow.forEach((u,i)=>{
+      const c=i%cols,r=Math.floor(i/cols),w=widths[c]!,h=heights[r]!;
+      const uw=fill(u,"x")?w:u.width,uh=fill(u,"y")?h:u.height;
+      put(u,x0+widths.slice(0,c).reduce((s,n)=>s+n,0)+c*l.gap+alignment(w-uw,l.justify),
+        y0+heights.slice(0,r).reduce((s,n)=>s+n,0)+r*crossGap+alignment(h-uh,l.align),uw,uh);
+    });
+  }else{
+    const lines:Unit[][]=[];let line:Unit[]=[],used=0;
+    for(const u of flow){
+      const n=mainFill(u)?1:size(u);
+      if(l.wrap&&!mainHug&&line.length&&used+l.gap+n>main){lines.push(line);line=[];used=0;}
+      used+=n+(line.length?l.gap:0);line.push(u);
+    }
+    if(line.length)lines.push(line);
+    const lineSizes=lines.map(items=>Math.max(1,...items.map(u=>crossFill(u)?1:cs(u))));
+    if(lines.length===1&&!crossHug)lineSizes[0]=Math.max(lineSizes[0]!,cross);
+    const naturalCross=lines.reduce((sum,items)=>sum+Math.max(1,...items.map(cs)),0)+Math.max(0,lines.length-1)*crossGap;
+    const occupiedCross=lineSizes.reduce((s,n)=>s+n,0)+Math.max(0,lines.length-1)*crossGap;
+    let crossCursor=crossPad+alignment(crossHug?0:cross-occupiedCross,l.align),maxMain=0;
+    lines.forEach((items,index)=>{
+      const gaps=Math.max(0,items.length-1);
+      const count=items.filter(mainFill).length;
+      const fixed=items.reduce((sum,u)=>sum+(mainFill(u)?0:size(u)),0);
+      const auto=l.justify==="space-between"&&!mainHug&&count===0&&gaps>0;
+      const gap=auto?Math.max(0,(main-fixed)/gaps):l.gap;
+      const fillSize=count?Math.max(1,(main-fixed-gap*gaps)/count):0;
+      const total=fixed+count*fillSize+gap*gaps;
+      let cursor=mainPad+alignment(mainHug?0:main-total,l.justify);
+      const lineCross=lineSizes[index]!;
+      for(const u of items){
+        const ms=mainFill(u)?fillSize:size(u), csz=crossFill(u)?lineCross:cs(u);
+        const ca=crossCursor+alignment(lineCross-csz,l.align);
+        put(u,row?cursor:ca,row?ca:cursor,row?ms:csz,row?csz:ms);
+        cursor+=ms+gap;
+      }
+      maxMain=Math.max(maxMain,total);
+      crossCursor+=lineCross+crossGap;
+    });
+    contentW=row?maxMain:naturalCross;contentH=row?naturalCross:maxMain;
+  }
+  return {elements:slide.elements.map(e=>positions.has(e.id)?{...e,...positions.get(e.id)!}:e),width:Math.max(1,round(contentW+p.left+p.right)),height:Math.max(1,round(contentH+p.top+p.bottom))};
+}
+function resolveFlat(slide:Slide,viewport:Viewport):Slide{
+  if(!slide.layout)return slide;
+  return {...slide,elements:arrangeFlat(slide,viewport).elements};
 }
 export function resolveSlideLayout(slide:Slide,viewport:Viewport):Slide{
   if(!slide.elements.some(e=>e.type==="frame"))return resolveFlat(slide,viewport);
@@ -68,17 +116,20 @@ export function resolveSlideLayout(slide:Slide,viewport:Viewport):Slide{
     e.x=round(e.x+dx);e.y=round(e.y+dy);
     if(e.type==="frame")for(const child of children(e.id))move(child,dx,dy);
   }
-  function arrange(parent?:Extract<SlideElement,{type:"frame"}>){
+  function arrange(parent?:Extract<SlideElement,{type:"frame"}>,measure=false){
     const list=children(parent?.id),layout=parent?parent.layout:slide.layout;
+    if(measure)for(const e of list)if(e.type==="frame")arrange(e,true);
     if(layout){
       const x=parent?.x??0,y=parent?.y??0;
       const local=list.map(e=>({...e,parentId:undefined,x:e.x-x,y:e.y-y}));
-      const result=resolveFlat({...slide,layout,elements:local},parent?{width:parent.width,height:parent.height}:viewport);
-      result.elements.forEach((e,i)=>{const target=list[i]!;move(target,e.x+x-target.x,e.y+y-target.y);});
+      const hx=parent?.sizingX==="hug",hy=parent?.sizingY==="hug";
+      const result=arrangeFlat({...slide,layout,elements:local},parent?{width:parent.width,height:parent.height}:viewport,hx,hy);
+      if(parent){if(hx)parent.width=result.width;if(hy)parent.height=result.height;}
+      if(!measure)result.elements.forEach((e,i)=>{const target=list[i]!;move(target,e.x+x-target.x,e.y+y-target.y);target.width=e.width;target.height=e.height;});
     }
-    for(const e of list)if(e.type==="frame")arrange(e);
+    if(!measure)for(const e of list)if(e.type==="frame")arrange(e);
   }
-  arrange();return {...slide,elements};
+  arrange(undefined,true);arrange();return {...slide,elements};
 }
 export function reflowPresentation(project: Presentation): Presentation {
   if (!project.slides.some(s => s.layout || s.elements.some(e=>e.type==="frame"))) return project;
@@ -87,9 +138,10 @@ export function reflowPresentation(project: Presentation): Presentation {
 export function layoutOverflows(slide: Slide, viewport: Viewport): boolean {
   if (!slide.layout) return false;
   const layout = slide.layout;
+  const p=layoutPadding(layout);
   return units(resolveSlideLayout(slide, viewport)).some(u =>
-    u.x + u.width > viewport.width - layout.paddingX + .01 ||
-    u.y + u.height > viewport.height - layout.paddingY + .01);
+    u.x + u.width > viewport.width - p.right + .01 ||
+    u.y + u.height > viewport.height - p.bottom + .01);
 }
 /** Reorder managed units at a drop coordinate without changing absolute elements. */
 export function reorderLayoutAt(project: Presentation, slideId: string, selectedIds: readonly string[], coordinate: number): Presentation {

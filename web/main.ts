@@ -306,26 +306,39 @@ function iconButton(action:string, label:string, icon:string, pressed?:boolean):
   return '<button type="button" class="btn icon-control" data-variant="ghost" data-action="'+action+'" title="'+escape(label)+'" aria-label="'+escape(label)+'"'+
     (pressed===undefined?'':' aria-pressed="'+pressed+'"')+'>'+inspectorIcon(icon)+'</button>';
 }
-function layoutControls(slide: Slide, project: Presentation): string {
-  const l=slide.layout;
-  const row=l?.direction==="row";
-  const directions=[["free","Свободное позиционирование","free"],["row","Горизонтальное направление","row"],["column","Вертикальное направление","column"]] as const;
+function layoutControls(slide: Slide, project: Presentation, dimensions=""): string {
+  const l=slide.layout,row=l?.direction==="row";
+  const directions=[["free","Свободная компоновка","free"],["column","Вертикально","column"],["row","Горизонтально","row"],["grid","Grid","grid"]] as const;
   const values=["start","center","end"] as const;
-  return '<div class="property-section layout-heading"><span>Auto Layout</span>'+ (l?iconButton("layout-direction-free","Отключить Auto Layout","free"):iconButton("layout-direction-column","Добавить Auto Layout","column"))+'</div>'+
-    '<div class="layout-control-row"><span>Направление</span><div class="icon-segment" role="group" aria-label="Направление">'+
-    directions.map(([id,label,icon])=>iconButton("layout-direction-"+id,label,icon,(l?.direction??"free")===id)).join("")+'</div></div>'+
-    (l?'<div class="layout-alignment-row"><div class="layout-alignment" role="group" aria-label="Выравнивание объектов">'+
+  const activeDirection=l?.gridColumns?"grid":l?.direction??"free";
+  const auto=l?.justify==="space-between";
+  const individual=l&&[l.paddingTop,l.paddingRight,l.paddingBottom,l.paddingLeft].some(v=>v!==undefined);
+  return '<div class="property-section layout-heading"><span>Auto Layout</span>'+iconButton(l?"layout-direction-free":"layout-direction-column",l?"Убрать Auto Layout":"Добавить Auto Layout","column")+'</div>'+
+    '<span class="layout-label">Flow</span><div class="layout-flow-row"><div class="icon-segment layout-flow" role="group" aria-label="Направление">'+
+    directions.map(([id,label,icon])=>iconButton("layout-direction-"+id,label,icon,activeDirection===id)).join("")+'</div>'+
+    (l&&!l.gridColumns&&row?iconButton("layout-wrap","Wrap — перенос строк","wrap",!!l.wrap):'')+'</div>'+
+    dimensions+
+    (l?'<div class="layout-alignment-row"><div class="layout-control-stack"><span class="layout-label">Alignment</span><div class="layout-alignment" role="group" aria-label="Выравнивание объектов">'+
     values.flatMap((y,iy)=>values.map((x,ix)=>{
       const align=row?y:x,justify=row?x:y;
-      const active=l.align===align&&l.justify===justify;
+      const active=l.align===align&&(auto?justify==="center":l.justify===justify);
       const label=["Сверху","По центру вертикально","Снизу"][iy]+" · "+["Слева","По центру горизонтально","Справа"][ix];
-      return '<button type="button" class="layout-dot" data-action="layout-point-'+align+'-'+justify+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+active+'"><span></span></button>';
-    })).join("")+'</div><div class="layout-spacing">'+
-    iconNumber("Интервал","layoutGap",l.gap,"gap")+
-    iconButton("layout-space-between","Равномерное распределение","distribute",l.justify==="space-between")+'</div></div>'+
-    '<div class="field-grid">'+iconNumber("Отступы по X","layoutPaddingX",l.paddingX,"paddingX")+iconNumber("Отступы по Y","layoutPaddingY",l.paddingY,"paddingY")+'</div>'+
-    '<div class="property-help">Перетащите объект, чтобы изменить порядок.</div>'+
+      return '<button type="button" class="layout-dot '+(row?"axis-row":"axis-column")+(auto?" auto-gap":"")+'" data-action="layout-point-'+align+'-'+justify+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+active+'"><span></span></button>';
+    })).join("")+'</div></div><div class="layout-spacing"><span class="layout-label">Gap</span>'+
+    '<div class="gap-control">'+(auto?'<div class="icon-number">'+inspectorIcon(row?"gap":"gapY")+'<span>Auto</span></div>':iconNumber("Интервал","layoutGap",l.gap,row?"gap":"gapY"))+
+    '<select class="gap-mode" data-field="layoutGapMode" aria-label="Режим интервала"><option value="packed"'+(!auto?' selected':'')+'>Packed</option><option value="auto"'+(auto?' selected':'')+'>Auto</option></select></div>'+
+    (l.gridColumns?iconNumber("Колонки","layoutGridColumns",l.gridColumns,"grid"):'')+
+    (l.wrap||l.gridColumns?iconNumber("Между строками","layoutCrossGap",l.crossGap??l.gap,"gapY"):'')+'</div></div>'+
+    '<span class="layout-label">Padding</span><div class="layout-padding-row"><div class="field-grid">'+
+    (individual?iconNumber("Слева","layoutPaddingLeft",l.paddingLeft??l.paddingX,"paddingLeft")+iconNumber("Справа","layoutPaddingRight",l.paddingRight??l.paddingX,"paddingRight")+iconNumber("Сверху","layoutPaddingTop",l.paddingTop??l.paddingY,"paddingTop")+iconNumber("Снизу","layoutPaddingBottom",l.paddingBottom??l.paddingY,"paddingBottom"):iconNumber("Отступы по X","layoutPaddingX",l.paddingX,"paddingX")+iconNumber("Отступы по Y","layoutPaddingY",l.paddingY,"paddingY"))+
+    '</div>'+iconButton("layout-padding-individual","Раздельные отступы","paddingAll",!!individual)+'</div>'+
     (layoutOverflows(slide,project.viewport)?'<div class="layout-warning" role="status">Объекты выходят за границы макета.</div>':''):'');
+}
+function sizeControl(e:SlideElement,axis:"X"|"Y",managed:boolean):string{
+  const key=axis==="X"?"width":"height",mode=axis==="X"?"sizingX":"sizingY";
+  const hug=e.type==="frame"&&!!e.layout;
+  return '<div class="layout-size"><label class="frame-number"><span>'+(axis==="X"?"W":"H")+'</span><input type="number" min="1" aria-label="'+(axis==="X"?"Ширина":"Высота")+'" data-field="'+key+'" value="'+e[key]+'"></label>'+
+    (hug||managed?'<select data-field="'+mode+'" aria-label="Режим размера '+axis+'"><option value="fixed"'+((e[mode]??"fixed")==="fixed"?' selected':'')+'>Fixed</option>'+(hug?'<option value="hug"'+(e[mode]==="hug"?' selected':'')+'>Hug</option>':'')+(managed?'<option value="fill"'+(e[mode]==="fill"?' selected':'')+'>Fill</option>':'')+'</select>':'')+'</div>';
 }
 function iconNumber(label:string,key:string,value:number,icon:string):string{
   return '<label class="icon-number" title="'+escape(label)+'">'+inspectorIcon(icon)+'<input type="number" min="0" max="10000" data-field="'+key+'" aria-label="'+escape(label)+'" value="'+value+'"></label>';
@@ -335,7 +348,7 @@ function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
   const flowing=elements.every(e=>isManaged(slide,e));
   return '<div class="property-section layout-heading"><span>Auto Layout</span>'+iconButton(flowing?"layout-absolute":"layout-flow",flowing?"Абсолютная позиция":"Вернуть в поток","absolute",!flowing)+'</div>'+
     '<div class="layout-control-row"><span>'+(flowing?"В потоке":"Абсолютно")+'</span><div class="icon-segment">'+
-    iconButton("layout-settings","Настройки макета","column")+'</div></div>';
+    iconButton("layout-settings","Настройки макета","column")+'</div></div>'+(flowing&&elements.length===1&&elements[0]?.type!=="frame"?'<div class="field-grid">'+sizeControl(elements[0],"X",true)+sizeControl(elements[0],"Y",true)+'</div>':'');
 }
 function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
   const layoutSlide:Slide={...slide,layout:e.layout,elements:slide.elements.filter(child=>child.parentId===e.id).map(child=>({...child,parentId:undefined,x:child.x-e.x,y:child.y-e.y}))};
@@ -349,8 +362,7 @@ function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
       [["left","По левому краю","left"],["center-x","По центру горизонтально","centerX"],["right","По правому краю","right"],["top","По верхнему краю","top"],["center-y","По центру вертикально","centerY"],["bottom","По нижнему краю","bottom"]].map(([key,label,icon])=>iconButton("frame-align-"+key,label!,icon!)).join("")+'</div>'+
       field("Название","name",e.name??"Frame")+pair(n("X","x",e.x),n("Y","y",e.y)))+
     itemLayoutControls(slide,[e])+
-    section("Layout",layoutControls(layoutSlide,{...project,viewport:{width:e.width,height:e.height}})+
-      '<span class="frame-label">Размеры</span>'+pair(n("W","width",e.width),n("H","height",e.height))+
+    section(e.layout?"Auto Layout":"Layout",layoutControls(layoutSlide,{...project,viewport:{width:e.width,height:e.height}},'<span class="layout-label">Dimensions</span>'+pair(sizeControl(e,"X",isManaged(slide,e)),sizeControl(e,"Y",isManaged(slide,e))))+
       '<label class="frame-check"><input type="checkbox" data-field="clipContent" '+(e.clipContent?'checked':'')+'> Обрезать содержимое</label>')+
     section("Внешний вид",pair(n("%","frameOpacity",Math.round((e.opacity??1)*100),"Непрозрачность"),n("⌜","borderRadius",e.borderRadius??0,"Скругление")))+
     fold("Заливка",'<div class="frame-fill"><input aria-label="Цвет заливки" title="Выбрать цвет" type="color" data-field="fill" value="'+(/^#[0-9a-f]{6}$/i.test(e.fill??"")?escape(e.fill):"#ffffff")+'">'+field("Цвет (CSS)","fill",e.fill??"transparent")+iconButton("frame-fill-clear","Убрать заливку","trash")+'</div>',true)+
@@ -601,18 +613,24 @@ function runAction(action: string): void {
     store.update(p=>updateElement(p,frame.id,patch));return;
   }
   if(action==="frame-layout-toggle"){if(frame)store.update(p=>updateElement(p,frame.id,{layout:frame.layout?undefined:{...defaultSlideLayout,paddingX:16,paddingY:16}}));return;}
-  if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||action==="layout-space-between"){
+  if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||["layout-space-between","layout-wrap","layout-padding-individual"].includes(action)){
     store.update(project=>{
       const target=frame?project.slides.find(s=>s.id===slide.id)!.elements.find(e=>e.id===frame.id) as FrameElement:project.slides.find(s=>s.id===slide.id)!;
       if(action.startsWith("layout-direction-")){
         const direction=action.slice("layout-direction-".length);
-        target.layout=direction==="free"?undefined:{...defaultSlideLayout,...(frame?{paddingX:16,paddingY:16}:{}),...target.layout,direction:direction as AutoLayout["direction"]};
+        target.layout=direction==="free"?undefined:{...defaultSlideLayout,...(frame?{paddingX:16,paddingY:16}:{}),...target.layout,direction:(direction==="grid"?"row":direction) as AutoLayout["direction"],gridColumns:direction==="grid"?target.layout?.gridColumns??2:undefined,wrap:direction==="row"?target.layout?.wrap:undefined};
       }else if(target.layout){
-        if(action==="layout-space-between")target.layout.justify=target.layout.justify==="space-between"?"start":"space-between";
+        if(action==="layout-wrap")target.layout.wrap=!target.layout.wrap;
+        else if(action==="layout-padding-individual"){
+          const l=target.layout,individual=[l.paddingTop,l.paddingRight,l.paddingBottom,l.paddingLeft].some(v=>v!==undefined);
+          if(individual){l.paddingX=l.paddingLeft??l.paddingX;l.paddingY=l.paddingTop??l.paddingY;delete l.paddingLeft;delete l.paddingRight;delete l.paddingTop;delete l.paddingBottom;}
+          else{l.paddingLeft=l.paddingRight=l.paddingX;l.paddingTop=l.paddingBottom=l.paddingY;}
+        }else if(action==="layout-space-between"){const l=target.layout;if(l.justify==="space-between")l.justify=l.packedJustify??"start";else{l.packedJustify=l.justify;l.justify="space-between";}}
         else{
           const [, ,align,justify]=action.split("-");
           target.layout.align=align as AutoLayout["align"];
-          target.layout.justify=justify as AutoLayout["justify"];
+          if(target.layout.justify!=="space-between")target.layout.justify=justify as AutoLayout["justify"];
+          else target.layout.packedJustify=justify as AutoLayout["packedJustify"];
         }
       }
       return project;
@@ -711,11 +729,15 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
         if (key === "layoutDirection") {
           target.layout = value === "free" ? undefined : { ...defaultSlideLayout, ...target.layout, direction: value as AutoLayout["direction"] };
         } else if (target.layout) {
-          if (key === "layoutGap" || key === "layoutPaddingX" || key === "layoutPaddingY") {
-            const n = Number(value);
-            if (!Number.isFinite(n)) return project;
-            const prop = key === "layoutGap" ? "gap" : key === "layoutPaddingX" ? "paddingX" : "paddingY";
-            target.layout[prop] = Math.max(0, Math.min(10000, n));
+          const l=target.layout;
+          if(key==="layoutGapMode"){
+            if(value==="auto"&&l.justify!=="space-between"){l.packedJustify=l.justify;l.justify="space-between";}
+            else if(value==="packed"&&l.justify==="space-between")l.justify=l.packedJustify??"start";
+          }else if(key==="layoutGridColumns"){l.gridColumns=Math.max(1,Math.min(50,Math.round(Number(value)||1)));}
+          else if(["layoutGap","layoutCrossGap","layoutPaddingX","layoutPaddingY","layoutPaddingTop","layoutPaddingRight","layoutPaddingBottom","layoutPaddingLeft"].includes(key)){
+            const n=Number(value);if(!Number.isFinite(n))return project;
+            const name=key.slice(6);const prop=(name[0]!.toLowerCase()+name.slice(1)) as "gap"|"crossGap"|"paddingX"|"paddingY"|"paddingTop"|"paddingRight"|"paddingBottom"|"paddingLeft";
+            l[prop]=Math.max(0,Math.min(10000,n));
           } else if (key === "layoutAlign") target.layout.align = value as AutoLayout["align"];
           else if (key === "layoutJustify") target.layout.justify = value as AutoLayout["justify"];
         }
@@ -737,7 +759,7 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
         return next;
       });
     } else {
-      const patch = key === "animation" ? {
+      const patch = key==="width"?{width:value,sizingX:"fixed"}:key==="height"?{height:value,sizingY:"fixed"}:key === "animation" ? {
         animation: { type: value, duration: element.animation?.duration ?? 600, delay: element.animation?.delay ?? 0 }
       } : key === "animationDelay" ? {
         animation: { type: element.animation?.type ?? "fade", duration: element.animation?.duration ?? 600, delay: Number(value) }

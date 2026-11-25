@@ -10,6 +10,12 @@ export type LayoutJustify = LayoutAlign | "space-between";
 export interface SlideLayout {
   direction: LayoutDirection;
   gap: number;
+  wrap?: boolean;
+  gridColumns?: number;
+  crossGap?: number;
+  paddingTop?: number; paddingRight?: number; paddingBottom?: number; paddingLeft?: number;
+  /** Packed main-axis position restored after Auto gap is disabled. */
+  packedJustify?: LayoutAlign;
   paddingX: number;
   paddingY: number;
   align: LayoutAlign;
@@ -23,6 +29,8 @@ export interface ElementBase {
   parentId?: string; // Coordinates remain slide-relative.
   /** Absolute objects are not positioned by slide Auto Layout. */
   layoutPosition?: "flow" | "absolute";
+  sizingX?: "fixed" | "hug" | "fill";
+  sizingY?: "fixed" | "hug" | "fill";
   /** Stable visual identity across slides; unique within each slide. */
   morphId?: string;
 }
