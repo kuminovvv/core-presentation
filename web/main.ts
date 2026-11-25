@@ -15,7 +15,7 @@ import "./style.css";
 import { initTheme } from "./theme";
 import { initPanels } from "./panels";
 import { enhanceSelects, syncSelect } from "./selects";
-import { bindAnimationBar, initTimelineHeight, timelineRange } from "./timeline";
+import { bindAnimationBar, createTimelineAnimation, initTimelineHeight, timelineRange } from "./timeline";
 
 enhanceSelects();
 initTheme();
@@ -425,13 +425,13 @@ function renderTimeline(): void {
     row.dataset.elementId = element.id;
     row.innerHTML = '<button type="button" class="timeline-object" title="' + escape(element.id) + '">' +
       escape(element.type === "text" ? element.text.slice(0, 25) : ({ shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type]) + '</button>' +
-      '<div class="timeline-track">' + (active
+      '<div class="timeline-track"' + (active ? '' : ' data-empty="true" role="button" tabindex="0" aria-label="Добавить анимацию: двойной щелчок по дорожке или Enter" title="Двойной щелчок ЛКМ — добавить анимацию"') + '>' + (active
         ? '<div class="timeline-bar" tabindex="0" role="slider" aria-label="Начало анимации" aria-valuemin="0" aria-valuemax="' + range + '" aria-valuenow="' + delay + '" style="left:' + (delay / range * 100) + '%;width:' + (duration / range * 100) + '%" title="' + escape(element.animation?.type) + ' · ' + delay + '–' + (delay + duration) + ' мс"><span class="timeline-edge start" data-edge="start"></span><span class="timeline-edge end" data-edge="end"></span></div>'
-        : '<span class="timeline-none">Без анимации</span>') + '</div>' +
+        : '<span class="timeline-none">Двойной щелчок — добавить</span>') + '</div>' +
       '<input type="number" class="timeline-number" data-timeline="delay" min="0" max="10000" step="50" aria-label="Задержка анимации" value="' + delay + '">' +
       '<input type="number" class="timeline-number" data-timeline="duration" min="0" max="10000" step="50" aria-label="Длительность анимации" value="' + duration + '">';
     row.querySelector(".timeline-object")!.addEventListener("click", () => canvas.select([element.id]));
-    const animation = element.animation ?? { type: "fade" as const, duration: 600, delay: 0 };
+    const animation = active ? element.animation! : { type: "fade" as const, duration: 600, delay: 0 };
     const commit = (delay: number, duration: number) => {
       store.update(project => updateElement(project, element.id, { animation: { ...animation, delay, duration } }));
     };
@@ -440,6 +440,30 @@ function renderTimeline(): void {
       commit(input.dataset.timeline === "delay" ? value : delay, input.dataset.timeline === "duration" ? value : duration);
     }));
     if (active) bindAnimationBar(row, delay, duration, range, commit);
+    else {
+      const track = row.querySelector<HTMLElement>(".timeline-track")!;
+      const create = (offset: number) => {
+        const rect = track.getBoundingClientRect();
+        const animation = createTimelineAnimation(offset, rect.width, range);
+        store.update(project => updateElement(project, element.id, { animation }));
+        // Re-render replaces the row. Focus the new clip, not the slide canvas.
+        const clip = Array.from(timeline.querySelectorAll<HTMLElement>(".timeline-row"))
+          .find(item => item.dataset.elementId === element.id)?.querySelector<HTMLElement>(".timeline-bar");
+        clip?.focus({ preventScroll: true });
+      };
+      track.addEventListener("dblclick", event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        create(event.clientX - track.getBoundingClientRect().left);
+      });
+      track.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        create(0);
+      });
+    }
     timeline.append(row);
   }
 }
@@ -727,7 +751,7 @@ document.addEventListener("fullscreenchange", () => {
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
   if (event.key === "Escape" && player) { closePreview(); return; }
-  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, [role=separator], [contenteditable='true']"));
+  const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, .timeline-track[data-empty], [role=separator], [contenteditable='true']"));
   if (typing || player) return;
   const command = event.ctrlKey || event.metaKey;
   const key = event.key.toLowerCase();

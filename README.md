@@ -10,6 +10,10 @@ Create presentations as versioned JSON documents and render them using standard 
 
 See [the 14-scene Composer study](docs/COMPOSER.md), including native morph transitions and an interactive offline widget. Run `npm run demo:composer` to add it to the Studio without replacing existing projects.
 
+## Animation timeline
+
+Double-click an empty element track at the desired time to create a 600 ms fade entrance. Enter on a focused empty track creates an entrance at time zero. Move existing clips horizontally and resize either edge; undo and redo work for creation and edits. Each element currently supports one entrance animation. Choose the animation type in the properties inspector.
+
 ## Studio appearance
 
 The browser studio uses locally bundled Basecoat UI (precompiled Tailwind CSS), neutral color tokens and rounded controls. Choose **Светлая**, **Тёмная** or **Системная** in the toolbar. The choice is saved in the browser; changing it never alters slide colors or export data. See `web/theme.css` for the design tokens and `web/style.css` for the editor layout.

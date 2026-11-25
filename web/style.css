@@ -230,3 +230,9 @@ button:focus-visible,summary:focus-visible,label.button:focus-within,input:focus
 .timeline-bar:focus-visible { outline:2px solid var(--ring);outline-offset:1px; }
 .timeline-none { line-height:24px; }
 .timeline-resizing { cursor:ns-resize;user-select:none; }
+
+/* Empty animation tracks invite creation without a separate button. */
+.timeline-track[data-empty] { cursor:crosshair; }
+.timeline-track[data-empty]:hover { background:var(--selected); }
+.timeline-track[data-empty]:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+.timeline-track[data-empty] .timeline-none { pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%; }

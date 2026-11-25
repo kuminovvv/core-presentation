@@ -174,6 +174,21 @@ try {
 
   await page.locator("#add-slide").click();
   await page.locator("#add-shape").click();
+  // Create a clip directly on a previously empty track using a real double-click.
+  if (await page.locator("#timeline-panel").isHidden()) await page.locator("#timeline-toggle").click();
+  const emptyTrack = page.locator(".timeline-track[data-empty]").first();
+  const emptyBox = await emptyTrack.boundingBox();
+  await page.mouse.dblclick(emptyBox.x + emptyBox.width * 0.4, emptyBox.y + emptyBox.height / 2);
+  const createdClip = page.locator(".timeline-row .timeline-bar").first();
+  await createdClip.waitFor();
+  check(Math.abs(Number(await page.locator('.timeline-row [data-timeline="delay"]').first().inputValue()) - 1000) <= 10,
+    "Double-click creates an animation at the clicked time");
+  check(await page.locator('.timeline-row [data-timeline="duration"]').first().inputValue() === "600",
+    "New animation has the default duration");
+  await page.locator("#undo").click();
+  check(await page.locator(".timeline-track[data-empty]").count() === 1, "Undo removes newly created animation");
+  await page.locator("#redo").click();
+  check(await page.locator(".timeline-bar").count() === 1, "Redo restores newly created animation");
   const stage = await page.locator("#editor-stage").boundingBox();
   const shape = await page.locator(".cp-slide .cp-element[data-element-id^='element-']").boundingBox();
   const zoom = stage.width / 1600;

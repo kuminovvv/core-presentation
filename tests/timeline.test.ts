@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { adjustAnimation, timelineRange } from "../web/timeline";
+import { adjustAnimation, createTimelineAnimation, timelineRange } from "../web/timeline";
 describe("timeline editing", () => {
+  it("creates a default clip at the clicked position with bounded timing", () => {
+    expect(createTimelineAnimation(100, 250, 2500)).toEqual({type:"fade",delay:1000,duration:600});
+    expect(createTimelineAnimation(-10, 250, 2500).delay).toBe(0);
+    expect(createTimelineAnimation(250, 250, 2500).delay).toBe(2500);
+    expect(createTimelineAnimation(250, 250, 20000).delay).toBe(10000);
+    expect(createTimelineAnimation(50, 0, 2500).delay).toBe(0);
+  });
   it("moves clips without changing duration", () => {
     expect(adjustAnimation(100, 600, 230, "move", 2500)).toEqual([330,600]);
     expect(adjustAnimation(100, 600, -500, "move", 2500)).toEqual([0,600]);

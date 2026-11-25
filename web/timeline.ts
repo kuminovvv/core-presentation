@@ -4,6 +4,13 @@ export function timelineRange(animations: (Entrance | undefined)[]): number {
   const end = Math.max(0, ...animations.filter(a => a && a.type !== "none").map(a => (a!.delay ?? 0) + (a!.duration ?? 600)));
   return Math.max(2500, Math.ceil((end + 100) / 500) * 500);
 }
+/** Start a default entrance at the clicked time, rounded to the nearest 10 ms. */
+export function createTimelineAnimation(offset: number, width: number, range: number): Entrance {
+  const time = width > 0 && Number.isFinite(offset) && Number.isFinite(range)
+    ? Math.round(Math.max(0, Math.min(1, offset / width)) * range / 10) * 10 : 0;
+  return { type: "fade", delay: Math.max(0, Math.min(10000, time)), duration: 600 };
+}
+
 type Edge = "start" | "end" | "move";
 export function adjustAnimation(delay: number, duration: number, delta: number, edge: Edge, range: number): [number, number] {
   const snap = Math.round(delta / 10) * 10;
