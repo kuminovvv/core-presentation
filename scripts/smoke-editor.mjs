@@ -328,6 +328,27 @@ try {
     .evaluate(element => getComputedStyle(element).fontFamily);
   check(family.includes("Georgia"), "Typography inspector applies a custom font family");
 
+  // Auto Layout must be editable using the existing Basecoat controls and native objects.
+  await page.locator("#add-slide").click();
+  await page.locator("#add-shape").click();
+  await page.locator("#add-shape").click();
+  await page.locator('[data-action="layout-settings"]').count().then(async count => {
+    if (count) await page.locator('[data-action="layout-settings"]').click();
+    else await page.keyboard.press("Escape");
+  });
+  await page.locator('select[data-field="layoutDirection"]').selectOption("row",{force:true});
+  await page.locator('input[data-field="layoutGap"]').fill("32");
+  await page.locator('input[data-field="layoutGap"]').blur();
+  const layoutPositions = await page.locator("#editor-stage .cp-element").evaluateAll(nodes => nodes.map(el => [parseFloat(el.style.left),parseFloat(el.style.top)]));
+  check(layoutPositions.length===2 && layoutPositions[0][0]===64 && layoutPositions[1][0]===376 && layoutPositions[0][1]===layoutPositions[1][1],
+    "Slide Auto Layout positions native shapes horizontally using padding and gap");
+  await page.locator('select[data-field="layoutDirection"]').selectOption("column",{force:true});
+  const column = await page.locator("#editor-stage .cp-element").evaluateAll(nodes => nodes.map(el=>[parseFloat(el.style.left),parseFloat(el.style.top)]));
+  check(column[0][0]===column[1][0] && column[1][1]-column[0][1]===212, "Vertical Auto Layout reflows on direction change");
+  const [layoutDownload] = await Promise.all([page.waitForEvent("download"),page.locator("#save").click()]);
+  const layoutDoc = JSON.parse(await readFile(await layoutDownload.path(),"utf8"));
+  check(layoutDoc.slides.at(-1).layout.direction==="column" && layoutDoc.slides.at(-1).layout.gap===32,
+    "Auto Layout is persisted in editable JSON");
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {

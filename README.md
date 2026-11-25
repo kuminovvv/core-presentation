@@ -10,6 +10,14 @@ Create presentations as versioned JSON documents and render them using standard 
 
 See [the 14-scene Composer study](docs/COMPOSER.md), including native morph transitions and an interactive offline widget. Run `npm run demo:composer` to add it to the Studio without replacing existing projects.
 
+## Slide Auto Layout
+
+Clear selection to open slide properties, then choose **Auto Layout → Направление**. Horizontal and vertical modes arrange editable objects in document order with gap, horizontal/vertical padding, cross-axis alignment, and main-axis distribution (including space-between). Drag managed objects along the layout axis to reorder, or use the inspector's Earlier/Later controls. Grouped objects are treated as one item. Switch any selected object/group to absolute positioning to place decorative overlays freely. Geometry reflows when item dimensions or membership change and is stored in the same document for preview, HTML/PDF and MCP. Switch back to Free to keep the current positions without automatic arrangement.
+
+This is fixed-size slide-level layout: nested Auto Layout frames, wrapping, fill/hug sizing and intrinsic text measurement are future work. Logical, unrotated bounds determine spacing. Overflow is shown in slide properties.
+
+MCP: `presentation_add_slide` and `presentation_update_slide` accept `layout: {direction:"row"|"column", gap, paddingX, paddingY, align:"start"|"center"|"end", justify:"start"|"center"|"end"|"space-between"}`. Send `layout:null` to disable. Set element `layoutPosition:"absolute"` to exclude it, or `"flow"` to return it to layout. `presentation_layout_reorder` moves selected items along the layout axis.
+
 ## Animation timeline
 
 Double-click an empty element track at the desired time to create a 600 ms fade entrance. Enter on a focused empty track creates an entrance at time zero. Move existing clips horizontally and resize either edge; undo and redo work for creation and edits. Each element currently supports one entrance animation. Choose the animation type in the properties inspector.

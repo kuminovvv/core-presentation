@@ -1,4 +1,5 @@
 import type { Presentation } from "./types";
+import { reflowPresentation } from "./auto-layout";
 
 export class PresentationValidationError extends Error {
   constructor(public readonly issues: string[]) {
@@ -45,6 +46,19 @@ export function validatePresentation(input: unknown): asserts input is Presentat
           fail(path + ".transition.duration", "must be non-negative");
       }
       if (!Array.isArray(slide.elements)) { fail(path + ".elements", "required array"); return; }
+      if (slide.layout !== undefined) {
+        if (!obj(slide.layout)) fail(path + ".layout", "must be an object");
+        else {
+          const layout = slide.layout;
+          if (!oneOf(layout.direction, ["row","column"])) fail(path + ".layout.direction", "unknown direction");
+          if (!oneOf(layout.align, ["start","center","end"])) fail(path + ".layout.align", "unknown alignment");
+          if (!oneOf(layout.justify, ["start","center","end","space-between"])) fail(path + ".layout.justify", "unknown distribution");
+          for (const key of ["gap","paddingX","paddingY"]) {
+            const value = layout[key];
+            if (!num(value) || value < 0 || value > 10000) fail(path + ".layout." + key, "must be between 0 and 10000");
+          }
+        }
+      }
       if (slide.notes !== undefined && !str(slide.notes)) fail(path + ".notes", "must be a string");
       const morphIds = new Set<string>();
       slide.elements.forEach((element: unknown, j: number) => {
@@ -70,6 +84,7 @@ export function validatePresentation(input: unknown): asserts input is Presentat
           if (element[key] !== undefined && !num(element[key]))
             fail(p + "." + key, "must be finite");
         }
+        if (element.layoutPosition !== undefined && !oneOf(element.layoutPosition, ["flow","absolute"])) fail(p + ".layoutPosition", "unknown positioning mode");
         if (element.groupId !== undefined && (!str(element.groupId) || !element.groupId.trim()))
           fail(p + ".groupId", "must be a non-empty string");
         if (element.type === "text" && !str(element.text)) fail(p + ".text", "required string");
@@ -94,10 +109,10 @@ export function validatePresentation(input: unknown): asserts input is Presentat
 export function parsePresentation(json: string): Presentation {
   const value: unknown = JSON.parse(json);
   validatePresentation(value);
-  return value;
+  return reflowPresentation(value);
 }
 
 export function serializePresentation(value: Presentation): string {
   validatePresentation(value);
-  return JSON.stringify(value, null, 2);
+  return JSON.stringify(reflowPresentation(value), null, 2);
 }

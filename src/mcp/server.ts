@@ -1,11 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import type { Presentation, SlideElement, Transition } from "../core/types";
+import type { Presentation, SlideElement, Transition, SlideLayout } from "../core/types";
 import {
   addElement, addSlide, createElement, createSlide, deleteElement, deleteSlide,
   duplicateSlide, groupElements, moveSlide, reorderElements, ungroupElements,
   updateElements,
 } from "../core/document";
+import { reorderLayoutAt } from "../core/auto-layout";
 import { buildStandaloneHtml } from "../export/standalone.mjs";
 import { buildPdf } from "../export/pdf.mjs";
 import { renderSlide } from "./preview";
@@ -28,7 +29,16 @@ const transition = z.strictObject({
   type: z.enum(["none", "fade", "slide", "zoom", "morph"]),
   duration: duration.optional(),
 });
+const slideLayout = z.strictObject({
+  direction: z.enum(["row", "column"]),
+  gap: z.number().finite().min(0).max(10000),
+  paddingX: z.number().finite().min(0).max(10000),
+  paddingY: z.number().finite().min(0).max(10000),
+  align: z.enum(["start", "center", "end"]),
+  justify: z.enum(["start", "center", "end", "space-between"]),
+});
 const patchSchema = z.strictObject({
+  layoutPosition: z.enum(["flow", "absolute"]).optional(),
   x: position.optional(), y: position.optional(),
   width: dimension.optional(), height: dimension.optional(),
   rotation: z.number().finite().min(-36000).max(36000).optional(),
@@ -64,7 +74,7 @@ const elementTypes: Record<SlideElement["type"], Set<string>> = {
   html: new Set(["html", "css", "javascript"]),
 };
 const universalProperties = new Set([
-  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId",
+  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId", "layoutPosition",
 ]);
 
 function validatePatch(element: SlideElement, patch: Patch): void {
@@ -102,7 +112,7 @@ function toolError(error: unknown) {
 }
 
 function editSlide(project: Presentation, slideId: string, patch: {
-  name?: string; background?: string; transition?: Transition; notes?: string;
+  name?: string; background?: string; transition?: Transition; notes?: string; layout?: SlideLayout;
 }): Presentation {
   const copy = structuredClone(project);
   const slide = copy.slides.find(item => item.id === slideId);
@@ -176,7 +186,7 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
           index,
           elements: includeElements ? slide.elements : slide.elements.map(element =>
             ({ id: element.id, type: element.type, x: element.x, y: element.y,
-               width: element.width, height: element.height, groupId: element.groupId })),
+               width: element.width, height: element.height, groupId: element.groupId, layoutPosition: element.layoutPosition })),
         })),
       };
     });
@@ -212,12 +222,14 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
       index: z.number().int().min(0).max(1000).optional(),
       transition: transition.optional(),
       notes: z.string().max(20000).optional(),
+      layout: slideLayout.optional(),
     }),
-    async ({ project, expectedRevision, name, background, index, transition: movement, notes }) => {
+    async ({ project, expectedRevision, name, background, index, transition: movement, notes, layout }) => {
       const slide = createSlide(name);
       if (background !== undefined) slide.background = background;
       if (movement !== undefined) slide.transition = movement;
       if (notes !== undefined) slide.notes = notes;
+      if (layout !== undefined) slide.layout = layout;
       const record = await repo.mutate(project, p => addSlide(p, slide, index), expectedRevision);
       return afterEdit(record, { slideId: slide.id, name: slide.name });
     });
@@ -228,11 +240,12 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
       background: css.optional(),
       transition: transition.optional(),
       notes: z.string().max(20000).optional(),
+      layout: slideLayout.nullable().optional(),
     }),
-    async ({ project, expectedRevision, slideId, name, background, transition: movement, notes }) => {
+    async ({ project, expectedRevision, slideId, name, background, transition: movement, notes, layout }) => {
       const patch = { ...(name !== undefined && { name }),
         ...(background !== undefined && { background }),
-        ...(movement !== undefined && { transition: movement }), ...(notes !== undefined && { notes }) };
+        ...(movement !== undefined && { transition: movement }), ...(notes !== undefined && { notes }), ...(layout !== undefined && { layout: layout ?? undefined }) };
       const record = await repo.mutate(project, p => editSlide(p, slideId, patch), expectedRevision);
       return afterEdit(record, { slideId });
     });
@@ -310,6 +323,13 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
     z.object({ ...projectField, slideId: id, elementIds: z.array(id).min(1).max(100) }),
     async ({ project, expectedRevision, slideId, elementIds }) => {
       const record = await repo.mutate(project, p => ungroupElements(p, slideId, elementIds), expectedRevision);
+      return afterEdit(record, { slideId, elementIds });
+    });
+
+  add("presentation_layout_reorder", "Move auto-layout elements as units to a coordinate along the slide's layout axis.",
+    z.object({ ...projectField, slideId: id, elementIds: z.array(id).min(1).max(100), coordinate: position }),
+    async ({ project, expectedRevision, slideId, elementIds, coordinate }) => {
+      const record = await repo.mutate(project, p => reorderLayoutAt(p, slideId, elementIds, coordinate), expectedRevision);
       return afterEdit(record, { slideId, elementIds });
     });
 

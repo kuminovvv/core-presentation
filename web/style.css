@@ -236,3 +236,6 @@ button:focus-visible,summary:focus-visible,label.button:focus-within,input:focus
 .timeline-track[data-empty]:hover { background:var(--selected); }
 .timeline-track[data-empty]:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
 .timeline-track[data-empty] .timeline-none { pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%; }
+
+.layout-order { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.layout-warning { background:var(--muted);color:var(--warning);border-radius:12px;padding:10px;font-size:12px;line-height:1.5; }

@@ -1,5 +1,6 @@
 import type { ElementKind, Presentation, Slide, SlideElement } from "./types";
 import { validatePresentation } from "./validation";
+import { reflowPresentation } from "./auto-layout";
 
 export function newId(prefix = "item"): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -37,7 +38,7 @@ export function addSlide(project: Presentation, slide: Slide, index = project.sl
   const next = structuredClone(project);
   next.slides.splice(Math.max(0, Math.min(index, next.slides.length)), 0, structuredClone(slide));
   validatePresentation(next);
-  return next;
+  return reflowPresentation(next);
 }
 
 export function deleteSlide(project: Presentation, slideId: string): Presentation {
@@ -70,7 +71,7 @@ export function addElement(project: Presentation, slideId: string, element: Slid
   if (!slide) throw new Error(`Slide not found: ${slideId}`);
   slide.elements.push(structuredClone(element));
   validatePresentation(next);
-  return next;
+  return reflowPresentation(next);
 }
 
 export function updateElement(project: Presentation, elementId: string, patch: Partial<SlideElement>): Presentation {
@@ -81,7 +82,7 @@ export function updateElement(project: Presentation, elementId: string, patch: P
   if (patch.type && patch.type !== element.type) throw new Error("Changing element types is not supported");
   Object.assign(element, patch);
   validatePresentation(next);
-  return next;
+  return reflowPresentation(next);
 }
 
 /** Apply a multi-element gesture as one validated, undoable history entry. */
@@ -99,7 +100,7 @@ export function updateElements(
     Object.assign(element, patch);
   }
   validatePresentation(next);
-  return next;
+  return reflowPresentation(next);
 }
 
 /** Stores an explicit group identity without flattening elements into a bitmap. */
@@ -167,7 +168,7 @@ export function duplicateElements(
   }
   slide.elements.push(...copies);
   validatePresentation(next);
-  return { project: next, ids: copies.map(e => e.id) };
+  return { project: reflowPresentation(next), ids: copies.map(e => e.id) };
 }
 
 export function deleteElement(project: Presentation, elementId: string): Presentation {
@@ -175,5 +176,5 @@ export function deleteElement(project: Presentation, elementId: string): Present
   const slide = next.slides.find(s => s.elements.some(e => e.id === elementId));
   if (!slide) throw new Error(`Element not found: ${elementId}`);
   slide.elements = slide.elements.filter(e => e.id !== elementId);
-  return next;
+  return reflowPresentation(next);
 }

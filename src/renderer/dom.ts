@@ -1,3 +1,4 @@
+import { resolveSlideLayout } from "../core/auto-layout";
 import type { HtmlElement, Presentation, Slide, SlideElement } from "../core/types";
 
 function customDocument(element: HtmlElement): string {
@@ -75,6 +76,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
 }
 
 export function createSlideNode(slide: Slide, project: Presentation): HTMLElement {
+  slide = resolveSlideLayout(slide, project.viewport);
   const layer = document.createElement("div");
   layer.className = "cp-slide";
   layer.dataset.slideId = slide.id;

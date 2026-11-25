@@ -1,5 +1,6 @@
 import type { Presentation } from "./types";
 import { validatePresentation } from "./validation";
+import { reflowPresentation } from "./auto-layout";
 
 export type Subscriber = (project: Presentation) => void;
 
@@ -12,7 +13,7 @@ export class PresentationStore {
 
   constructor(initial: Presentation, private readonly maxHistory = 100) {
     validatePresentation(initial);
-    this.current = structuredClone(initial);
+    this.current = structuredClone(reflowPresentation(initial));
   }
   get value(): Presentation { return structuredClone(this.current); }
   get canUndo(): boolean { return this.past.length > 0; }
@@ -22,8 +23,9 @@ export class PresentationStore {
     return () => this.listeners.delete(listener);
   }
   update(transform: (project: Presentation) => Presentation): void {
-    const next = transform(structuredClone(this.current));
-    validatePresentation(next);
+    const candidate = transform(structuredClone(this.current));
+    validatePresentation(candidate);
+    const next = reflowPresentation(candidate);
     if (JSON.stringify(next) === JSON.stringify(this.current)) return;
     this.past.push(this.current);
     if (this.past.length > this.maxHistory) this.past.shift();
@@ -36,7 +38,7 @@ export class PresentationStore {
   /** Opening a different project or applying remote changes resets history. */
   load(project: Presentation): void {
     validatePresentation(project);
-    this.current = structuredClone(project);
+    this.current = structuredClone(reflowPresentation(project));
     this.past = [];
     this.future = [];
     this.emit();

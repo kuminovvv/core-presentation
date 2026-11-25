@@ -9,7 +9,7 @@ interface EditorHooks {
   project(): Presentation;
   slideId(): string;
   scale(): number;
-  commit(patches: Record<string, GeometryPatch>): void;
+  commit(patches: Record<string, GeometryPatch>, mode: Mode): void;
   selectionChanged(): void;
 }
 
@@ -216,7 +216,7 @@ export class CanvasInteractions {
     }
     if (gesture.didMove && Object.keys(patches).length) {
       // Revert DOM preview before committing a single undoable operation.
-      this.hooks.commit(patches);
+      this.hooks.commit(patches, gesture.mode);
     } else {
       this.refresh();
     }

@@ -125,6 +125,14 @@ try {
   check(saved.slides[0].elements.length === 2, "Document persisted to disk without in-memory state");
   check((await stat(exported.file)).isFile(), "Standalone file is stored alongside the presentation");
 
+  const layoutUpdate = (await call("presentation_update_slide", {
+    project:"agent-demo",slideId:slide.slideId,layout:{direction:"row",gap:20,paddingX:40,paddingY:30,align:"start",justify:"start"}
+  })).body;
+  await call("presentation_ungroup",{project:"agent-demo",slideId:slide.slideId,elementIds:[text.elementId],expectedRevision:layoutUpdate.revision});
+  const arranged = (await call("presentation_get_slide",{project:"agent-demo",slideId:slide.slideId})).body.slide;
+  check(arranged.layout.direction==="row" && arranged.elements[0].x===40 && arranged.elements[1].x===1310,
+    "MCP can enable persistent Auto Layout and native geometry reflows");
+  await call("presentation_update_slide",{project:"agent-demo",slideId:slide.slideId,layout:null});
   const pdfExport = (await call("presentation_export_pdf", { project: "agent-demo" })).body;
   const pdfBytes = await readFile(pdfExport.file);
   check(pdfBytes.subarray(0, 5).toString("utf8") === "%PDF-",

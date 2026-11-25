@@ -4,11 +4,24 @@ export type TransitionKind = "none" | "fade" | "slide" | "zoom" | "morph";
 export type EntranceKind = "none" | "fade" | "slide-up" | "zoom";
 export type Entrance = { type: EntranceKind; duration?: number; delay?: number };
 export type Transition = { type: TransitionKind; duration?: number };
+export type LayoutDirection = "row" | "column";
+export type LayoutAlign = "start" | "center" | "end";
+export type LayoutJustify = LayoutAlign | "space-between";
+export interface SlideLayout {
+  direction: LayoutDirection;
+  gap: number;
+  paddingX: number;
+  paddingY: number;
+  align: LayoutAlign;
+  justify: LayoutJustify;
+}
 export interface ElementBase {
   id: string; x: number; y: number; width: number; height: number;
   rotation?: number; opacity?: number; zIndex?: number; animation?: Entrance;
   /** Elements sharing a groupId can be selected and transformed together. */
   groupId?: string;
+  /** Absolute objects are not positioned by slide Auto Layout. */
+  layoutPosition?: "flow" | "absolute";
   /** Stable visual identity across slides; unique within each slide. */
   morphId?: string;
 }
@@ -32,6 +45,8 @@ export type SlideElement = TextElement | ShapeElement | ImageElement | HtmlEleme
 export interface Slide {
   id: string; name: string; background: string;
   transition?: Transition; elements: SlideElement[]; notes?: string;
+  /** Omitted for ordinary free-positioned slides. */
+  layout?: SlideLayout;
 }
 export interface Presentation {
   version: 1; id: string; title: string;

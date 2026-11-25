@@ -86,7 +86,7 @@ export class ProjectRepository {
     const json = serializePresentation(project);
     const path = await this.projectPath(name);
     await this.atomicWrite(path, json);
-    return { project: structuredClone(project), revision: revisionOf(json), path };
+    return { project: parsePresentation(json), revision: revisionOf(json), path };
   }
 
   async create(name: string, title: string, viewport?: { width: number; height: number }): Promise<ProjectRecord> {

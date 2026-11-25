@@ -1,5 +1,6 @@
 import type { Presentation, Slide, SlideElement, TransitionKind } from "../core/types";
 import { validatePresentation } from "../core/validation";
+import { reflowPresentation } from "../core/auto-layout";
 import { createSlideNode } from "./dom";
 import { animateMorph } from "./morph";
 import "./player.css";
@@ -21,7 +22,7 @@ export class PresentationPlayer {
 
   constructor(container: HTMLElement, project: Presentation, initialIndex = 0) {
     validatePresentation(project);
-    this.project = structuredClone(project);
+    this.project = structuredClone(reflowPresentation(project));
     this.index = Math.max(0, Math.min(initialIndex, project.slides.length - 1));
     this.root.className = "cp-player";
     this.root.tabIndex = 0;
@@ -49,7 +50,7 @@ export class PresentationPlayer {
     validatePresentation(project);
     this.generation++;
     this.changing = false;
-    this.project = structuredClone(project);
+    this.project = structuredClone(reflowPresentation(project));
     this.index = keepIndex ? Math.min(this.index, project.slides.length - 1) : 0;
     this.index = Math.max(0, this.index);
     this.render();

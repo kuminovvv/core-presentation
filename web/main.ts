@@ -4,7 +4,8 @@ import {
   groupElements, ungroupElements, reorderElements, updateElements,
   parsePresentation, serializePresentation, updateElement,
 } from "../src";
-import type { ElementKind, Presentation, Slide, SlideElement } from "../src";
+import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout } from "../src";
+import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
 import { unionBounds } from "../src/editor/geometry";
@@ -50,7 +51,21 @@ const canvas = new CanvasInteractions(stage, {
   project: () => store.value,
   slideId: () => slideId,
   scale: () => scale,
-  commit: patches => store.update(project => updateElements(project, patches)),
+  commit: (patches, mode) => store.update(project => {
+    const slide = project.slides.find(s => s.id === slideId);
+    const moving = slide?.elements.filter(e => Object.prototype.hasOwnProperty.call(patches, e.id)) ?? [];
+    if (mode === "move" && slide?.layout) {
+      const flow = moving.filter(e => isFlowElement(slide, e));
+      const free = Object.fromEntries(moving.filter(e => !isFlowElement(slide, e)).map(e => [e.id, patches[e.id]!]));
+      let next = Object.keys(free).length ? updateElements(project, free) : project;
+      if (flow.length) {
+        const box = unionBounds(flow.map(e => ({ ...e, ...patches[e.id]! })));
+        next = reorderLayoutAt(next, slideId, flow.map(e => e.id), slide.layout.direction === "row" ? box.x + box.width / 2 : box.y + box.height / 2);
+      }
+      return next;
+    }
+    return updateElements(project, patches);
+  }),
   selectionChanged: () => { renderProperties(); renderTimeline(); },
 });
 
@@ -269,6 +284,33 @@ function pick(label: string, key: string, value: string, choices: string[]): str
     `<option value="${choice}" ${choice === value ? "selected" : ""}>${escape(choice)}</option>`).join("")}</select></label>`;
 }
 
+function layoutPick(label: string, key: string, value: string, options: Record<string,string>): string {
+  return '<label class="field"><span>' + escape(label) + '</span><select data-field="' + key + '">' +
+    Object.entries(options).map(([id,label]) => '<option value="' + id + '"' + (id === value ? ' selected' : '') + '>' + escape(label) + '</option>').join("") +
+    '</select></label>';
+}
+function layoutControls(slide: Slide, project: Presentation): string {
+  const l = slide.layout;
+  return '<div class="property-section">Auto Layout</div>' +
+    layoutPick("Направление", "layoutDirection", l?.direction ?? "free", {free:"Свободное",row:"Горизонтально",column:"Вертикально"}) +
+    (l ? '<div class="field-grid">' + field("Интервал, px","layoutGap",l.gap,"number") +
+    field("Отступы X, px","layoutPaddingX",l.paddingX,"number") + field("Отступы Y, px","layoutPaddingY",l.paddingY,"number") + '</div>' +
+    layoutPick("Выравнивание поперёк", "layoutAlign", l.align, {start:"Начало",center:"Центр",end:"Конец"}) +
+    layoutPick("Распределение вдоль", "layoutJustify", l.justify, {start:"Начало",center:"Центр",end:"Конец","space-between":"Равномерно"}) +
+    '<div class="property-help">Перетаскивайте объекты для смены порядка. Размеры остаются фиксированными.</div>' +
+    (layoutOverflows(slide,project.viewport) ? '<div class="layout-warning" role="status">Объекты выходят за границы макета. Уменьшите размеры, интервалы или отступы.</div>' : '') : '');
+}
+function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
+  if (!slide.layout || !elements.length) return "";
+  const flowing = elements.every(e => isFlowElement(slide,e));
+  return '<div class="property-section">Auto Layout</div><div class="property-help">' +
+    (flowing ? "Положение определяется макетом." : "Свободное позиционирование вне потока.") +
+    '</div><div class="inspector-actions">' +
+    (flowing ? '<div class="layout-order"><button data-action="layout-previous">Раньше</button><button data-action="layout-next">Позже</button></div>' : '') +
+    '<button data-action="' + (flowing ? "layout-absolute" : "layout-flow") + '">' + (flowing ? "Абсолютная позиция" : "Вернуть в Auto Layout") +
+    '</button><button data-action="layout-settings">Настройки макета слайда</button></div>';
+}
+
 function renderProperties(): void {
   const { project, slide, element } = selected();
   if (!slide) {
@@ -281,6 +323,7 @@ function renderProperties(): void {
     const alreadyGrouped = groups.size === 1 && Boolean(elements[0]?.groupId);
     props.innerHTML = `<div class="property-title">Выделено: ${elements.length}</div>
       <div class="property-help">Shift + щелчок или выделение рамкой · Ctrl+G для группы</div>
+      ${itemLayoutControls(slide, elements)}
       <div class="property-section">Выравнивание</div>
       <div class="align-grid">
         <button data-action="align-left" title="По левому краю">⇤ Слева</button>
@@ -299,6 +342,7 @@ function renderProperties(): void {
         <button class="danger" data-action="delete">Удалить выбранное</button>
       </div>`;
     bindActions();
+    if (elements.some(e => isFlowElement(slide,e))) props.querySelectorAll<HTMLButtonElement>('[data-action^="align-"]').forEach(button => { button.disabled = true; button.title = "Используйте настройки Auto Layout"; });
     return;
   }
   if (!element) {
@@ -309,6 +353,7 @@ function renderProperties(): void {
         ${field("Ширина","viewportWidth",project.viewport.width,"number")}
         ${field("Высота","viewportHeight",project.viewport.height,"number")}
       </div>
+      ${layoutControls(slide, project)}
       ${field("Фон (CSS)","background",slide.background)}
       ${area("Заметки докладчика","notes",slide.notes)}
       ${pick("Переход","transition",slide.transition?.type ?? "fade",["none","fade","slide","zoom","morph"])}
@@ -319,6 +364,7 @@ function renderProperties(): void {
   } else {
     props.innerHTML = `<div class="property-title">${escape(({ text: "Текст", shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type])}</div>
       <div class="property-help">ID: ${escape(element.id)}</div>
+      ${itemLayoutControls(slide,[element])}
       <div class="field-grid">
         ${field("X","x",element.x,"number")}${field("Y","y",element.y,"number")}
         ${field("Ширина","width",element.width,"number")}${field("Высота","height",element.height,"number")}
@@ -370,6 +416,9 @@ function renderProperties(): void {
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
     .forEach(input => input.addEventListener("change", () => applyProperty(input)));
   enhanceSelects(props);
+  if (element && isFlowElement(slide, element)) {
+    props.querySelectorAll<HTMLInputElement>('input[data-field="x"],input[data-field="y"]').forEach(input => { input.disabled = true; input.title = "Управляется Auto Layout"; });
+  }
   const fileInput = props.querySelector<HTMLInputElement>("#image-upload");
   if (fileInput && element?.type === "image") fileInput.addEventListener("change", async () => {
     const file = fileInput.files?.[0];
@@ -478,6 +527,19 @@ function runAction(action: string): void {
   if (!slide || !canvas.ids.length) return;
   const ids = canvas.ids;
   const elements = slide.elements.filter(e => ids.includes(e.id));
+  if (action === "layout-settings") { canvas.clear(); return; }
+  if (action === "layout-previous" || action === "layout-next") {
+    store.update(project => stepLayoutOrder(project, slide.id, ids, action === "layout-previous" ? -1 : 1));
+    return;
+  }
+  if (action === "layout-absolute" || action === "layout-flow") {
+    const selected = new Set(ids);
+    const groups = new Set(elements.map(e => e.groupId).filter(Boolean));
+    const patches = Object.fromEntries(slide.elements.filter(e => selected.has(e.id) || (e.groupId && groups.has(e.groupId)))
+      .map(e => [e.id, { layoutPosition: action === "layout-absolute" ? "absolute" as const : "flow" as const }]));
+    store.update(project => updateElements(project, patches));
+    return;
+  }
   if (action === "delete") {
     canvas.clear();
     store.update(project => ids.reduce((doc, id) => deleteElement(doc, id), project));
@@ -505,7 +567,7 @@ function runAction(action: string): void {
     store.update(project => reorderElements(project, slide.id, ids, action));
     return;
   }
-  if (action.startsWith("align-") && elements.length > 1) {
+  if (action.startsWith("align-") && elements.length > 1 && !elements.some(e => isFlowElement(slide,e))) {
     const bounds = unionBounds(elements);
     const patches: Record<string, Partial<SlideElement>> = {};
     for (const e of elements) {
@@ -539,6 +601,24 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
       value = Math.max(0, value);
   }
   try {
+    if (key.startsWith("layout")) {
+      store.update(project => {
+        const target = project.slides.find(s => s.id === slide.id)!;
+        if (key === "layoutDirection") {
+          target.layout = value === "free" ? undefined : { ...defaultSlideLayout, ...target.layout, direction: value as AutoLayout["direction"] };
+        } else if (target.layout) {
+          if (key === "layoutGap" || key === "layoutPaddingX" || key === "layoutPaddingY") {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return project;
+            const prop = key === "layoutGap" ? "gap" : key === "layoutPaddingX" ? "paddingX" : "paddingY";
+            target.layout[prop] = Math.max(0, Math.min(10000, n));
+          } else if (key === "layoutAlign") target.layout.align = value as AutoLayout["align"];
+          else if (key === "layoutJustify") target.layout.justify = value as AutoLayout["justify"];
+        }
+        return project;
+      });
+      return;
+    }
     if (!element) {
       store.update(project => {
         const next = structuredClone(project);
@@ -783,7 +863,11 @@ window.addEventListener("keydown", event => {
     for (const el of selected().slide?.elements ?? []) {
       if (ids.includes(el.id)) patches[el.id] = { x: el.x + dx, y: el.y + dy };
     }
-    store.update(project => updateElements(project, patches));
+    const slide = selected().slide;
+    if (slide?.layout && slide.elements.some(e => ids.includes(e.id) && isFlowElement(slide,e))) {
+      const axis = slide.layout.direction === "row" ? dx : dy;
+      if (axis) store.update(project => stepLayoutOrder(project, slide.id, ids, axis < 0 ? -1 : 1));
+    } else store.update(project => updateElements(project, patches));
   }
 });
 store.subscribe(() => {
