@@ -21,9 +21,9 @@
           "id": "composer-scene-1-title",
           "type": "text",
           "morphId": "title",
-          "x": 0,
+          "x": 488,
           "y": 413,
-          "width": 1600,
+          "width": 850,
           "height": 95,
           "text": "the life of a composer",
           "fontFamily": "Arial, sans-serif",
@@ -31,7 +31,7 @@
           "fontWeight": 400,
           "color": "#202020",
           "lineHeight": 1.16,
-          "align": "center"
+          "align": "left"
         }
       ]
     },
@@ -49,9 +49,9 @@
           "id": "composer-scene-2-title",
           "type": "text",
           "morphId": "title",
-          "x": 0,
+          "x": 488,
           "y": 413,
-          "width": 1600,
+          "width": 850,
           "height": 95,
           "text": "the life of a composer",
           "fontFamily": "Arial, sans-serif",
@@ -59,7 +59,7 @@
           "fontWeight": 400,
           "color": "#202020",
           "lineHeight": 1.16,
-          "align": "center"
+          "align": "left"
         },
         {
           "id": "composer-scene-2-music",
@@ -108,9 +108,9 @@
           "id": "composer-scene-3-title",
           "type": "text",
           "morphId": "title",
-          "x": 0,
+          "x": 488,
           "y": 413,
-          "width": 1600,
+          "width": 850,
           "height": 95,
           "text": "the life of a composer",
           "fontFamily": "Arial, sans-serif",
@@ -118,7 +118,7 @@
           "fontWeight": 400,
           "color": "#202020",
           "lineHeight": 1.16,
-          "align": "center"
+          "align": "left"
         },
         {
           "id": "composer-scene-3-aside",
@@ -681,10 +681,10 @@
           "x": 400,
           "y": 375,
           "width": 800,
-          "height": 155,
-          "html": "<form id=\"composer\"><input aria-label=\"Message\" placeholder=\"Type a message…\" autocomplete=\"off\"><button aria-label=\"Send message\">↑</button></form><output id=\"reply\" aria-live=\"polite\"></output>",
+          "height": 172,
+          "html": "<form id=\"composer\"><input aria-label=\"Message\" placeholder=\"Type a message…\" autocomplete=\"off\"><button type=\"button\" aria-label=\"Send message\">↑</button></form><output id=\"reply\" aria-live=\"polite\"></output>",
           "css": "*{box-sizing:border-box}body{margin:0;padding:32px 34px;font:25px Arial,sans-serif;background:transparent;color:#202020}form{display:flex;height:68px;border:1.5px solid #ddd;border-radius:36px;align-items:center;padding:10px 14px 10px 22px;box-shadow:0 12px 35px #0000000d;background:#fcfcfc}input{font:inherit;flex:1;min-width:0;outline:none;border:0;background:none;color:#202020}button{font:inherit;flex:none;border:0;border-radius:50%;width:44px;height:44px;background:#202020;color:white;cursor:pointer}output{display:block;text-align:center;font-size:17px;padding-top:10px}",
-          "javascript": "document.querySelector(\"form\").addEventListener(\"submit\",event=>{event.preventDefault();const input=document.querySelector(\"input\");document.querySelector(\"output\").textContent=input.value.trim()?\"You wrote: \"+input.value.trim():\"Type something first.\";});"
+          "javascript": "const input=document.querySelector(\"input\");const send=()=>{document.querySelector(\"output\").textContent=input.value.trim()?\"You wrote: \"+input.value.trim():\"Type something first.\";};document.querySelector(\"button\").addEventListener(\"click\",send);input.addEventListener(\"keydown\",event=>{if(event.key===\"Enter\"){event.preventDefault();send();}});document.querySelector(\"form\").addEventListener(\"submit\",event=>event.preventDefault());"
         },
         {
           "id": "composer-scene-14-final",
