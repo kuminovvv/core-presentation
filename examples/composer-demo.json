@@ -1,0 +1,708 @@
+{
+  "version": 1,
+  "id": "composer-demo-v1",
+  "title": "The life of a composer · Core Presentation study",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "slides": [
+    {
+      "id": "composer-scene-1",
+      "name": "Opening",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "none",
+        "duration": 680
+      },
+      "notes": "A title alone, placed in the center of the scene. Advance to introduce the metaphor.",
+      "elements": [
+        {
+          "id": "composer-scene-1-title",
+          "type": "text",
+          "morphId": "title",
+          "x": 0,
+          "y": 413,
+          "width": 1600,
+          "height": 95,
+          "text": "the life of a composer",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 68,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "align": "center"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-2",
+      "name": "A different composer",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Introduce the idea with a musical note and a quiet aside.",
+      "elements": [
+        {
+          "id": "composer-scene-2-title",
+          "type": "text",
+          "morphId": "title",
+          "x": 0,
+          "y": 413,
+          "width": 1600,
+          "height": 95,
+          "text": "the life of a composer",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 68,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "align": "center"
+        },
+        {
+          "id": "composer-scene-2-music",
+          "type": "text",
+          "morphId": "music",
+          "x": 1115,
+          "y": 414,
+          "width": 95,
+          "height": 80,
+          "text": "♪",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 55,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16
+        },
+        {
+          "id": "composer-scene-2-aside",
+          "type": "text",
+          "morphId": "aside",
+          "x": 516,
+          "y": 552,
+          "width": 700,
+          "height": 105,
+          "text": "Not quite the musical kind.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-3",
+      "name": "The metaphor",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "The musical note disappears. Prepare to transform the title into a text field.",
+      "elements": [
+        {
+          "id": "composer-scene-3-title",
+          "type": "text",
+          "morphId": "title",
+          "x": 0,
+          "y": 413,
+          "width": 1600,
+          "height": 95,
+          "text": "the life of a composer",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 68,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "align": "center"
+        },
+        {
+          "id": "composer-scene-3-aside",
+          "type": "text",
+          "morphId": "aside",
+          "x": 516,
+          "y": 552,
+          "width": 700,
+          "height": 105,
+          "text": "Not quite the musical kind.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#a6a6a6",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-4",
+      "name": "The input",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "The title becomes the text within a large, rounded input field.",
+      "elements": [
+        {
+          "id": "composer-scene-4-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 140,
+          "y": 387,
+          "width": 1320,
+          "height": 126,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 63,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-4-caption",
+          "type": "text",
+          "morphId": "caption",
+          "x": 188,
+          "y": 224,
+          "width": 930,
+          "height": 105,
+          "text": "A small space to start a conversation.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        },
+        {
+          "id": "composer-scene-4-title",
+          "type": "text",
+          "morphId": "title",
+          "x": 188,
+          "y": 422,
+          "width": 1150,
+          "height": 75,
+          "text": "the life of a composer",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 44,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-5",
+      "name": "A first message",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Use a simple greeting to demonstrate the composer as a communication surface.",
+      "elements": [
+        {
+          "id": "composer-scene-5-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 140,
+          "y": 387,
+          "width": 1320,
+          "height": 126,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 63,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-5-caption",
+          "type": "text",
+          "morphId": "caption",
+          "x": 188,
+          "y": 224,
+          "width": 930,
+          "height": 105,
+          "text": "A small space to start a conversation.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#a6a6a6",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        },
+        {
+          "id": "composer-scene-5-message",
+          "type": "text",
+          "morphId": "message",
+          "x": 188,
+          "y": 422,
+          "width": 1150,
+          "height": 75,
+          "text": "hello?",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 44,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-6",
+      "name": "A response",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "A response appears above the composer, leaving the input ready for the next message.",
+      "elements": [
+        {
+          "id": "composer-scene-6-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 140,
+          "y": 387,
+          "width": 1320,
+          "height": 126,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 63,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-6-caption",
+          "type": "text",
+          "morphId": "caption",
+          "x": 188,
+          "y": 205,
+          "width": 930,
+          "height": 105,
+          "text": "A small space to start a conversation.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#a6a6a6",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        },
+        {
+          "id": "composer-scene-6-reply",
+          "type": "text",
+          "morphId": "reply",
+          "x": 188,
+          "y": 325,
+          "width": 1100,
+          "height": 60,
+          "text": "Hello! What would you like to explore?",
+          "fontFamily": "Arial, sans-serif",
+          "fontSize": 40,
+          "fontWeight": 400,
+          "color": "#858585",
+          "lineHeight": 1.16
+        },
+        {
+          "id": "composer-scene-6-cursor",
+          "type": "shape",
+          "morphId": "cursor",
+          "x": 188,
+          "y": 427,
+          "width": 2,
+          "height": 49,
+          "fill": "#202020"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-7",
+      "name": "Look closer",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Zoom in by changing the field geometry. Every visible element is still editable.",
+      "elements": [
+        {
+          "id": "composer-scene-7-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 320,
+          "y": 352,
+          "width": 1690,
+          "height": 180,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 90,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-7-cursor",
+          "type": "shape",
+          "morphId": "cursor",
+          "x": 386,
+          "y": 411,
+          "width": 3,
+          "height": 64,
+          "fill": "#202020"
+        },
+        {
+          "id": "composer-scene-7-detail",
+          "type": "text",
+          "morphId": "detail",
+          "x": 494,
+          "y": 582,
+          "width": 910,
+          "height": 105,
+          "text": "So much work goes into a tiny thing.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-8",
+      "name": "Years of details",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Zoom closer and emphasize the small details of an apparently simple component.",
+      "elements": [
+        {
+          "id": "composer-scene-8-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 320,
+          "y": 324,
+          "width": 2350,
+          "height": 252,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 126,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-8-cursor",
+          "type": "shape",
+          "morphId": "cursor",
+          "x": 386,
+          "y": 403,
+          "width": 4,
+          "height": 94,
+          "fill": "#202020"
+        },
+        {
+          "id": "composer-scene-8-detail",
+          "type": "text",
+          "morphId": "detail",
+          "x": 494,
+          "y": 634,
+          "width": 910,
+          "height": 105,
+          "text": "So much work goes into a tiny thing.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#a6a6a6",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-9",
+      "name": "Back to the whole",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Pull back. The entire interface component is only a small object in the scene.",
+      "elements": [
+        {
+          "id": "composer-scene-9-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 434,
+          "y": 416,
+          "width": 732,
+          "height": 68,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 34,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-9-cursor",
+          "type": "shape",
+          "morphId": "cursor",
+          "x": 457,
+          "y": 435,
+          "width": 2,
+          "height": 30,
+          "fill": "#202020"
+        },
+        {
+          "id": "composer-scene-9-detail",
+          "type": "text",
+          "morphId": "detail",
+          "x": 495,
+          "y": 546,
+          "width": 830,
+          "height": 105,
+          "text": "So much work goes into a tiny thing.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-10",
+      "name": "Simple at first glance",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Set up the geometric explanation.",
+      "elements": [
+        {
+          "id": "composer-scene-10-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 434,
+          "y": 416,
+          "width": 732,
+          "height": 68,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 34,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-10-explain",
+          "type": "text",
+          "morphId": "explain",
+          "x": 473,
+          "y": 260,
+          "width": 790,
+          "height": 105,
+          "text": "It seems deceptively simple.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-11",
+      "name": "Four edges",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Blue guides highlight the horizontal edges of the component.",
+      "elements": [
+        {
+          "id": "composer-scene-11-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 250,
+          "y": 395,
+          "width": 1100,
+          "height": 110,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 55,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-11-explain",
+          "type": "text",
+          "morphId": "explain",
+          "x": 473,
+          "y": 232,
+          "width": 1000,
+          "height": 105,
+          "text": "Four edges. Four rounded corners.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#a6a6a6",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        },
+        {
+          "id": "composer-scene-11-top",
+          "type": "shape",
+          "morphId": "top",
+          "x": 300,
+          "y": 395,
+          "width": 1000,
+          "height": 3,
+          "fill": "#2868ff"
+        },
+        {
+          "id": "composer-scene-11-bottom",
+          "type": "shape",
+          "morphId": "bottom",
+          "x": 300,
+          "y": 502,
+          "width": 1000,
+          "height": 3,
+          "fill": "#2868ff"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-12",
+      "name": "Rounded corners",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "The same field stays in place while curved guides emphasize the corner geometry.",
+      "elements": [
+        {
+          "id": "composer-scene-12-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 250,
+          "y": 395,
+          "width": 1100,
+          "height": 110,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 55,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-12-explain",
+          "type": "text",
+          "morphId": "explain",
+          "x": 473,
+          "y": 232,
+          "width": 1000,
+          "height": 105,
+          "text": "Four edges. Four rounded corners.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        },
+        {
+          "id": "composer-scene-12-curves",
+          "type": "html",
+          "morphId": "curves",
+          "x": 246,
+          "y": 391,
+          "width": 1108,
+          "height": 118,
+          "html": "<svg viewBox=\"0 0 1108 118\" xmlns=\"http://www.w3.org/2000/svg\" style=\"width:100%;height:100%\"><g fill=\"none\" stroke=\"#2868ff\" stroke-width=\"3\"><path d=\"M59 4A55 55 0 0 0 4 59M4 59A55 55 0 0 0 59 114M1049 4A55 55 0 0 1 1104 59M1104 59A55 55 0 0 1 1049 114\"/></g></svg>",
+          "css": "body{margin:0;overflow:hidden}"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-13",
+      "name": "The question",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "Remove the guides and return to the small field.",
+      "elements": [
+        {
+          "id": "composer-scene-13-composer",
+          "type": "shape",
+          "morphId": "composer",
+          "x": 434,
+          "y": 416,
+          "width": 732,
+          "height": 68,
+          "fill": "#fcfcfc",
+          "border": "1.5px solid #d8d8d4",
+          "borderRadius": 34,
+          "boxShadow": "0 26px 70px #0000000c, 0 2px 4px #00000009"
+        },
+        {
+          "id": "composer-scene-13-question",
+          "type": "text",
+          "morphId": "question",
+          "x": 480,
+          "y": 270,
+          "width": 950,
+          "height": 105,
+          "text": "How much could there be to it?",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    },
+    {
+      "id": "composer-scene-14",
+      "name": "Try it",
+      "background": "#fcfcfc",
+      "transition": {
+        "type": "morph",
+        "duration": 680
+      },
+      "notes": "The final field is a working sandboxed HTML component. Type and submit a message; this local demo echoes it without sending data anywhere.",
+      "elements": [
+        {
+          "id": "composer-scene-14-interactive",
+          "type": "html",
+          "morphId": "interactive",
+          "x": 400,
+          "y": 375,
+          "width": 800,
+          "height": 155,
+          "html": "<form id=\"composer\"><input aria-label=\"Message\" placeholder=\"Type a message…\" autocomplete=\"off\"><button aria-label=\"Send message\">↑</button></form><output id=\"reply\" aria-live=\"polite\"></output>",
+          "css": "*{box-sizing:border-box}body{margin:0;padding:32px 34px;font:25px Arial,sans-serif;background:transparent;color:#202020}form{display:flex;height:68px;border:1.5px solid #ddd;border-radius:36px;align-items:center;padding:10px 14px 10px 22px;box-shadow:0 12px 35px #0000000d;background:#fcfcfc}input{font:inherit;flex:1;min-width:0;outline:none;border:0;background:none;color:#202020}button{font:inherit;flex:none;border:0;border-radius:50%;width:44px;height:44px;background:#202020;color:white;cursor:pointer}output{display:block;text-align:center;font-size:17px;padding-top:10px}",
+          "javascript": "document.querySelector(\"form\").addEventListener(\"submit\",event=>{event.preventDefault();const input=document.querySelector(\"input\");document.querySelector(\"output\").textContent=input.value.trim()?\"You wrote: \"+input.value.trim():\"Type something first.\";});"
+        },
+        {
+          "id": "composer-scene-14-final",
+          "type": "text",
+          "morphId": "final",
+          "x": 580,
+          "y": 552,
+          "width": 850,
+          "height": 105,
+          "text": "Now it is your turn.",
+          "fontFamily": "Georgia, serif",
+          "fontSize": 43,
+          "fontWeight": 400,
+          "color": "#202020",
+          "lineHeight": 1.16,
+          "fontStyle": "italic"
+        }
+      ]
+    }
+  ]
+}

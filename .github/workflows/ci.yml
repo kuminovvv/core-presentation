@@ -23,6 +23,7 @@ jobs:
       - name: MCP and browser live synchronization
         run: npm run test:live
       - run: npm run build
+      - run: npm run test:composer
       - name: Test built web studio and shared API
         run: npm run test:built
       - name: Visual editor browser smoke tests
@@ -52,6 +53,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run test:composer
       - name: Windows production browser smoke test
         run: npm run test:built
       - name: Windows MCP client test

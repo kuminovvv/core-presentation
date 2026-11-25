@@ -1,6 +1,6 @@
 /** Format v1. Geometry is measured in slide pixels. */
 export type ElementKind = "text" | "shape" | "image" | "html";
-export type TransitionKind = "none" | "fade" | "slide" | "zoom";
+export type TransitionKind = "none" | "fade" | "slide" | "zoom" | "morph";
 export type EntranceKind = "none" | "fade" | "slide-up" | "zoom";
 export type Entrance = { type: EntranceKind; duration?: number; delay?: number };
 export type Transition = { type: TransitionKind; duration?: number };
@@ -9,14 +9,16 @@ export interface ElementBase {
   rotation?: number; opacity?: number; zIndex?: number; animation?: Entrance;
   /** Elements sharing a groupId can be selected and transformed together. */
   groupId?: string;
+  /** Stable visual identity across slides; unique within each slide. */
+  morphId?: string;
 }
 export interface TextElement extends ElementBase {
   type: "text"; text: string; color?: string; fontFamily?: string;
   fontSize?: number; fontWeight?: number; align?: "left" | "center" | "right";
-  lineHeight?: number;
+  lineHeight?: number; fontStyle?: "normal" | "italic";
 }
 export interface ShapeElement extends ElementBase {
-  type: "shape"; fill?: string; borderRadius?: number; border?: string;
+  type: "shape"; fill?: string; borderRadius?: number; border?: string; boxShadow?: string;
 }
 export interface ImageElement extends ElementBase {
   type: "image"; src: string; alt?: string; fit?: "contain" | "cover" | "fill";
@@ -29,7 +31,7 @@ export interface HtmlElement extends ElementBase {
 export type SlideElement = TextElement | ShapeElement | ImageElement | HtmlElement;
 export interface Slide {
   id: string; name: string; background: string;
-  transition?: Transition; elements: SlideElement[];
+  transition?: Transition; elements: SlideElement[]; notes?: string;
 }
 export interface Presentation {
   version: 1; id: string; title: string;

@@ -17,7 +17,9 @@
     "mcp:http": "node scripts/launch-mcp-http.mjs",
     "test:mcp:http": "node --import tsx scripts/smoke-mcp-http.mjs",
     "test:mcp": "node scripts/smoke-mcp.mjs",
-    "test:live": "node scripts/smoke-live.mjs"
+    "test:live": "node scripts/smoke-live.mjs",
+    "demo:composer": "node --import tsx scripts/seed-composer.mjs",
+    "test:composer": "node scripts/smoke-composer.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.4.0",

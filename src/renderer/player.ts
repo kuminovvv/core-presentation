@@ -1,6 +1,7 @@
 import type { Presentation, Slide, SlideElement, TransitionKind } from "../core/types";
 import { validatePresentation } from "../core/validation";
 import { createSlideNode } from "./dom";
+import { animateMorph } from "./morph";
 import "./player.css";
 
 type NavigateListener = (index: number, slide: Slide) => void;
@@ -14,6 +15,7 @@ export class PresentationPlayer {
   private stage = document.createElement("div");
   private resizeObserver: ResizeObserver;
   private changing = false;
+  private generation = 0;
   private disposed = false;
   private listeners = new Set<NavigateListener>();
 
@@ -45,6 +47,8 @@ export class PresentationPlayer {
 
   replace(project: Presentation, keepIndex = true): void {
     validatePresentation(project);
+    this.generation++;
+    this.changing = false;
     this.project = structuredClone(project);
     this.index = keepIndex ? Math.min(this.index, project.slides.length - 1) : 0;
     this.index = Math.max(0, this.index);
@@ -58,24 +62,29 @@ export class PresentationPlayer {
   async goTo(nextIndex: number): Promise<boolean> {
     if (this.disposed || this.changing || nextIndex === this.index ||
         nextIndex < 0 || nextIndex >= this.count) return false;
+    const generation = this.generation;
+    const previousSlide = this.project.slides[this.index]!;
     const incomingSlide = this.project.slides[nextIndex]!;
     const old = this.stage.querySelector<HTMLElement>(".cp-slide");
     const incoming = createSlideNode(incomingSlide, this.project);
     this.stage.append(incoming);
     this.changing = true;
-    const kind = incomingSlide.transition?.type ?? "fade";
-    const duration = reduced() ? 0 : Math.min(10000, incomingSlide.transition?.duration ?? 450);
-    if (old && duration > 0 && kind !== "none") {
+    const transition = nextIndex < this.index ? previousSlide.transition : incomingSlide.transition;
+    const kind = transition?.type ?? "fade";
+    const duration = reduced() ? 0 : Math.min(10000, transition?.duration ?? 450);
+    if (old && duration > 0 && kind === "morph") {
+      await animateMorph(previousSlide, incomingSlide, old, incoming, duration);
+    } else if (old && duration > 0 && kind !== "none") {
       const frames = this.transitionFrames(kind, nextIndex > this.index);
       const a = old.animate(frames.out, timing(duration));
       const b = incoming.animate(frames.in, timing(duration));
       await Promise.all([a.finished.catch(() => undefined), b.finished.catch(() => undefined)]);
     }
-    if (this.disposed) return false;
+    if (this.disposed || generation !== this.generation) return false;
     this.stage.replaceChildren(incoming);
     this.index = nextIndex;
     this.changing = false;
-    this.animateEntrance(incomingSlide, incoming);
+    if (kind !== "morph") this.animateEntrance(incomingSlide, incoming);
     this.notify();
     return true;
   }
