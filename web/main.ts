@@ -636,7 +636,10 @@ function runAction(action: string): void {
   }
   if(action==="frame-layout-toggle")action=frame?.layout?"remove-auto-layout":"add-auto-layout";
   if(action==="add-auto-layout"){
-    if(frame){if(!frame.layout)store.update(p=>updateElement(p,frame.id,{layout:inferFrameLayout(frame,slide.elements)}));}
+    if(frame){if(!frame.layout)store.update(p=>{
+      const s=p.slides.find(s=>s.id===slide.id)!;const f=s.elements.find(e=>e.id===frame.id) as FrameElement;
+      f.layout=inferFrameLayout(f,s.elements);const children=s.elements.filter(e=>e.parentId===f.id).sort((a,b)=>f.layout!.direction==="row"?a.x-b.x:a.y-b.y);let i=0;s.elements=s.elements.map(e=>e.parentId===f.id?children[i++]!:e);return p;
+    });}
     else if(canvas.ids.length){const chosen=slide.elements.filter(e=>rootSelection(slide,canvas.ids).includes(e.id));if(chosen.length&&new Set(chosen.map(e=>e.parentId)).size===1)makeFrame(unionBounds(chosen),chosen.map(e=>e.id),true);}
     else if(!slide.layout)runAction("layout-direction-column");
     return;

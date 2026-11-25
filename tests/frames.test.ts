@@ -1,6 +1,6 @@
 import {describe,it,expect} from "vitest";
 import {createPresentation,createSlide,createElement,addSlide,updateElement,duplicateElements,deleteElement,duplicateSlide} from "../src/core/document";
-import {insertFrame,reorderFrameChild,pickFrameLayer,frameAtPoint} from "../src/core/frames";
+import {insertFrame,reorderFrameChild,pickFrameLayer,frameAtPoint,inferFrameLayout} from "../src/core/frames";
 import {shortcutKey} from "../web/shortcuts";
 import {validatePresentation} from "../src/core/validation";
 import {reflowPresentation,defaultSlideLayout} from "../src/core/auto-layout";
@@ -46,6 +46,16 @@ describe("native frames",()=>{
    expect(p.slides[0]!.elements.find(e=>e.id==="frame")!.width).toBe(40);
    p=updateElement(p,"child",{text:"aaaaaa"});
    expect(p.slides[0]!.elements.find(e=>e.id==="frame")!.width).toBe(80);
+ });
+ it("infers horizontal layout from sibling positions and preserves the parent",()=>{
+   let p=make(),s=p.slides[0]!;
+   s.elements.push({...createElement("shape"),id:"second",parentId:"frame",x:90,y:40,width:40,height:50});
+   const frame=s.elements.find(e=>e.id==="frame") as FrameElement;
+   expect(inferFrameLayout(frame,s.elements)).toMatchObject({direction:"row",gap:20,paddingX:20,paddingY:20});
+   const nested={...createElement("frame"),id:"nested",x:30,y:40,width:100,height:50} as FrameElement;
+   p=insertFrame(p,s.id,nested,["child","second"]);validatePresentation(p);
+   expect(p.slides[0]!.elements.find(e=>e.id==="nested")!.parentId).toBe("frame");
+   expect(p.slides[0]!.elements.find(e=>e.id==="child")!.parentId).toBe("nested");
  });
  it("rejects cyclic parents",()=>{const p=make();expect(()=>updateElement(p,"frame",{parentId:"frame"})).toThrow("invalid frame ancestry");});
 });

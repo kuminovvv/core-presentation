@@ -26,7 +26,9 @@ export function insertFrame(project:Presentation,slideId:string,frame:FrameEleme
   const adopt=new Set(roots??slide.elements.filter(e=>e.parentId===frame.parentId&&contains(frame,e)).map(e=>e.id));
   const incomplete=new Set(slide.elements.filter(e=>e.groupId&&!adopt.has(e.id)).map(e=>e.groupId));
   for(const e of slide.elements)if(adopt.has(e.id)&&!incomplete.has(e.groupId)){e.parentId=frame.id;}
-  slide.elements.push(frame);return next;
+  const first=roots?.length?slide.elements.findIndex(e=>roots.includes(e.id)):-1;
+  if(first>=0)slide.elements.splice(first,0,frame);else slide.elements.push(frame);
+  return next;
 }
 export function translateFrameChildren(before:Presentation,after:Presentation,patches:Readonly<Record<string,Partial<SlideElement>>>):void{
   for(const slide of after.slides){

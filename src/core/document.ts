@@ -84,6 +84,7 @@ export function updateElement(project: Presentation, elementId: string, patch: P
   if (!element) throw new Error(`Element not found: ${elementId}`);
   if (patch.id && patch.id !== elementId) throw new Error("Changing element IDs is not supported");
   if (patch.type && patch.type !== element.type) throw new Error("Changing element types is not supported");
+  if(element.type==="text"&&!("textAdvances" in patch)&&["fontFamily","fontWeight","fontStyle"].some(k=>k in patch))delete element.textAdvances;
   Object.assign(element, patch);
   validatePresentation(next);
   translateFrameChildren(project,next,{[elementId]:patch});
@@ -102,6 +103,7 @@ export function updateElements(
     if (!element) throw new Error(`Element not found: ${id}`);
     if (patch.id !== undefined && patch.id !== id) throw new Error("Changing element IDs is not supported");
     if (patch.type !== undefined && patch.type !== element.type) throw new Error("Changing element types is not supported");
+    if(element.type==="text"&&!("textAdvances" in patch)&&["fontFamily","fontWeight","fontStyle"].some(k=>k in patch))delete element.textAdvances;
     Object.assign(element, patch);
   }
   validatePresentation(next);
