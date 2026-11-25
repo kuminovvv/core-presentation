@@ -41,7 +41,7 @@ export function syncSelect(native: HTMLSelectElement): void {
   }
   if (!changed && input.value === native.value && root.dataset.selectInitialized) return;
   input.value = native.value;
-  for (const option of list.querySelectorAll<HTMLElement>("[role=option]")) {
+  for (const option of Array.from(list.querySelectorAll<HTMLElement>("[role=option]"))) {
     if (option.dataset.value === native.value) option.setAttribute("aria-selected", "true");
     else option.removeAttribute("aria-selected");
   }
@@ -49,7 +49,7 @@ export function syncSelect(native: HTMLSelectElement): void {
   root.refresh?.();
 }
 export function enhanceSelects(scope: ParentNode = document): void {
-  for (const native of scope.querySelectorAll<HTMLSelectElement>("select")) {
+  for (const native of Array.from(scope.querySelectorAll<HTMLSelectElement>("select"))) {
     if (controls.has(native)) continue;
     const shell = document.createElement("div");
     shell.className = "studio-select";
