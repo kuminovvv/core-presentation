@@ -3,83 +3,89 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#111827" />
+    <meta name="theme-color" content="#f5f5f7" />
     <title>Core Presentation — Studio</title>
+    <script>try { const t=localStorage.getItem("core-presentation:theme"); const d=t==="dark" || (t!=="light" && matchMedia("(prefers-color-scheme: dark)").matches); document.documentElement.classList.toggle("dark",d); document.documentElement.dataset.theme=d?"dark":"light"; } catch {}</script>
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand"><span class="brand-mark">C<span>●</span></span><span>core<span class="brand-muted">/presentation</span></span><span class="tag">WEB 1.0</span></div>
+        <div class="brand"><span class="brand-mark"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg></span><span>Core <span class="brand-muted">Presentation</span></span></div>
         <div class="project-switcher">
           <select id="project-picker" aria-label="Проект"><option value="">Локальный пример</option></select>
-          <button id="new-project" type="button" title="Новая презентация">＋</button>
+          <button id="new-project" type="button" title="Новая презентация" aria-label="Новая презентация" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           <details id="project-actions" class="project-actions" hidden>
-            <summary title="Действия с проектом">•••</summary>
+            <summary title="Действия с проектом" aria-label="Действия с проектом"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></summary>
             <div class="project-actions-menu">
-              <button type="button" id="duplicate-project">Создать копию</button>
-              <button type="button" id="archive-project">Архивировать проект</button>
+              <button type="button" id="duplicate-project" class="btn" data-variant="ghost">Создать копию</button>
+              <button type="button" id="archive-project" class="btn" data-variant="ghost">Архивировать проект</button>
             </div>
           </details>
         </div>
         <div class="project-name"><input id="project-title" aria-label="Название презентации" maxlength="140" /></div>
+        <div class="appearance"><label class="theme-control" title="Оформление интерфейса"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4m-4 0h8"/></svg><select id="theme-picker" class="select" aria-label="Тема интерфейса"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></label></div>
         <div class="toolbar right">
-          <button id="undo" title="Отменить (Ctrl+Z)">↶</button>
-          <button id="redo" title="Повторить (Ctrl+Shift+Z)">↷</button>
+          <button id="undo" title="Отменить (Ctrl+Z)" aria-label="Отменить" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
+          <button id="redo" title="Повторить (Ctrl+Shift+Z)" aria-label="Повторить" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5m5 5H10a6 6 0 0 0 0 12h2"/></svg></button>
           <span class="separator"></span>
-          <label for="import-file" class="button secondary">Импорт JSON</label>
+          <label for="import-file" class="button btn secondary" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span>Импорт</span></label>
           <input id="import-file" type="file" accept=".json,application/json" hidden />
           <span id="sync-status" data-state="local" role="status" aria-live="polite">Локальный пример</span>
-          <button id="sync-remote" class="secondary" type="button" hidden>Версия агента</button>
-          <button id="sync-copy" class="secondary" type="button" hidden>Сохранить копию</button>
-          <button id="save" class="secondary">Сохранить JSON</button>
-          <button id="export-html" class="secondary" title="Скачать автономную HTML-презентацию">Экспорт HTML</button>
-          <button id="export-pdf" class="secondary" title="Скачать PDF со всеми слайдами">PDF</button>
-          <button id="preview" class="primary">▶ Предпросмотр</button>
+          <button id="sync-remote" class="btn secondary" type="button" hidden data-variant="outline">Версия агента</button>
+          <button id="sync-copy" class="btn secondary" type="button" hidden data-variant="outline">Сохранить копию</button>
+          <button id="save" class="btn secondary" data-variant="outline">Сохранить JSON</button>
+          <button id="export-html" class="btn secondary" title="Скачать автономную HTML-презентацию" data-variant="outline">Экспорт HTML</button>
+          <button id="export-pdf" class="btn secondary" title="Скачать PDF со всеми слайдами" data-variant="outline">PDF</button>
+          <button id="preview" class="btn primary" data-variant="primary"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg><span>Показ</span></button>
         </div>
       </header>
       <div class="app-body">
-        <aside class="sidebar">
-          <div class="panel-head"><span>СЛАЙДЫ</span>
+        <aside class="sidebar" id="slides-panel">
+          <div id="slides-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели слайдов" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="340" aria-valuenow="216"></div>
+          <div class="panel-head"><span>Слайды</span>
             <div class="sidebar-buttons">
-              <button id="add-slide" title="Добавить пустой слайд">＋</button>
+              <button id="add-slide" title="Добавить пустой слайд" aria-label="Добавить пустой слайд" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
               <details class="layout-menu">
-                <summary title="Готовые макеты слайдов">▦</summary>
+                <summary title="Готовые макеты слайдов" aria-label="Готовые макеты слайдов"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M12 9v11"/></svg></summary>
                 <div class="layout-options">
-                  <button type="button" data-layout="title">Титульный</button>
-                  <button type="button" data-layout="section">Раздел</button>
-                  <button type="button" data-layout="two-columns">Две колонки</button>
-                  <button type="button" data-layout="quote">Цитата</button>
-                  <button type="button" data-layout="blank">Пустой слайд</button>
+                  <button type="button" data-layout="title" class="btn" data-variant="ghost">Титульный</button>
+                  <button type="button" data-layout="section" class="btn" data-variant="ghost">Раздел</button>
+                  <button type="button" data-layout="two-columns" class="btn" data-variant="ghost">Две колонки</button>
+                  <button type="button" data-layout="quote" class="btn" data-variant="ghost">Цитата</button>
+                  <button type="button" data-layout="blank" class="btn" data-variant="ghost">Пустой слайд</button>
                 </div>
               </details>
             </div>
           </div>
           <div id="slide-list" class="slide-list"></div>
-          <div class="sidebar-bottom">OPEN FORMAT · HTML/CSS/JS</div>
+          <div class="sidebar-bottom">HTML · CSS · JS</div>
         </aside>
         <main class="workspace">
           <div class="tools">
+            <button id="toggle-slides" class="btn panel-toggle" data-variant="ghost" title="Показать или скрыть слайды" aria-label="Панель слайдов" aria-controls="slides-panel" aria-pressed="true"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
             <span class="tools-label">Добавить</span>
-            <button id="add-text">T <span>Текст</span></button>
-            <button id="add-shape">▢ <span>Фигура</span></button>
-            <button id="add-image">▧ <span>Изображение</span></button>
-            <button id="add-html">⌘ <span>HTML / JS</span></button>
+            <button id="add-text" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3M12 4v16M8 20h8"/></svg><span>Текст</span></button>
+            <button id="add-shape" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/></svg><span>Фигура</span></button>
+            <button id="add-image" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Изображение</span></button>
+            <button id="add-html" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 4l-4 16"/></svg><span>HTML / JS</span></button>
             <span class="separator"></span>
-            <button id="timeline-toggle" aria-expanded="false" title="Показать временную шкалу анимаций">◷ <span>Анимации</span></button>
+            <button id="timeline-toggle" aria-expanded="false" title="Показать временную шкалу анимаций" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Анимации</span></button>
             <div class="tools-spacer"></div>
+            <button id="toggle-inspector" class="btn panel-toggle" data-variant="ghost" title="Показать или скрыть свойства" aria-label="Панель свойств" aria-controls="inspector-panel" aria-pressed="true"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
             <span class="hint">Shift · множественный выбор</span>
           </div>
           <div id="stage-shell" class="stage-shell">
             <div id="editor-stage" class="editor-stage" aria-label="Холст слайда"></div>
           </div>
           <section id="timeline-panel" class="timeline-panel" aria-label="Временная шкала анимаций" hidden>
-            <div class="timeline-header"><span>АНИМАЦИИ СЛАЙДА</span><span>0 мс</span><span>500</span><span>1000</span><span>1500</span><span>2000+</span></div>
+            <div class="timeline-header"><span>Анимации слайда</span><span>0 мс</span><span>500</span><span>1000</span><span>1500</span><span>2000+</span></div>
             <div id="timeline-rows" class="timeline-rows"></div>
           </section>
           <div class="status"><span id="slide-counter"></span><span id="viewport-label">1600 × 900 · 16:9</span><span id="zoom"></span></div>
         </main>
-        <aside class="inspector">
-          <div class="panel-head">СВОЙСТВА</div>
+        <aside class="inspector" id="inspector-panel">
+          <div id="inspector-resizer" class="panel-resizer" role="separator" tabindex="0" aria-label="Ширина панели свойств" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="420" aria-valuenow="280"></div>
+          <div class="panel-head">Свойства</div>
           <div id="properties" class="properties"></div>
         </aside>
       </div>
@@ -87,11 +93,11 @@
     <div id="preview-overlay" class="preview-overlay" hidden>
       <div id="preview-surface" class="preview-surface"></div>
       <div class="preview-controls">
-        <button id="preview-back">←</button>
+        <button id="preview-back" aria-label="Предыдущий слайд" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <span id="preview-counter">1 / 1</span>
-        <button id="preview-next">→</button>
-        <button id="preview-fullscreen" type="button" title="Показать на весь экран (F)">⛶ Полный экран</button>
-        <button id="preview-close" class="preview-close">✕ Закрыть</button>
+        <button id="preview-next" aria-label="Следующий слайд" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+        <button id="preview-fullscreen" type="button" title="Показать на весь экран (F)" class="btn" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Полный экран</span></button>
+        <button id="preview-close" class="btn preview-close" data-variant="ghost"><svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg><span>Закрыть</span></button>
       </div>
     </div>
     <dialog id="create-project-dialog" class="project-dialog">
@@ -102,8 +108,8 @@
         <label>Имя папки<input id="new-project-name" required pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}" maxlength="64" placeholder="my-presentation"></label>
         <p id="project-error" class="project-error" role="alert"></p>
         <div class="dialog-actions">
-          <button id="cancel-project" type="button">Отмена</button>
-          <button id="confirm-project" type="submit">Создать проект</button>
+          <button id="cancel-project" type="button" class="btn" data-variant="ghost">Отмена</button>
+          <button id="confirm-project" type="submit" class="btn" data-variant="primary">Создать проект</button>
         </div>
       </form>
     </dialog>

@@ -12,6 +12,11 @@ import { ProjectSync } from "./project-sync";
 import { createLayoutSlide } from "../src/editor/layouts";
 import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
+import { initTheme } from "./theme";
+import { initPanels } from "./panels";
+
+initTheme();
+initPanels();
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
@@ -268,7 +273,7 @@ function renderProperties(): void {
     const alreadyGrouped = groups.size === 1 && Boolean(elements[0]?.groupId);
     props.innerHTML = `<div class="property-title">Выделено: ${elements.length}</div>
       <div class="property-help">Shift + щелчок или выделение рамкой · Ctrl+G для группы</div>
-      <div class="property-section">ВЫРАВНИВАНИЕ</div>
+      <div class="property-section">Выравнивание</div>
       <div class="align-grid">
         <button data-action="align-left" title="По левому краю">⇤ Слева</button>
         <button data-action="align-center-x" title="По центру горизонтально">↔ Центр</button>
@@ -277,7 +282,7 @@ function renderProperties(): void {
         <button data-action="align-center-y" title="По центру вертикально">↕ Центр</button>
         <button data-action="align-bottom" title="По нижнему краю">Снизу ⇣</button>
       </div>
-      <div class="property-section">КОМПОНОВКА</div>
+      <div class="property-section">Компоновка</div>
       <div class="inspector-actions">
         <button data-action="${alreadyGrouped ? "ungroup" : "group"}">${alreadyGrouped ? "Разгруппировать" : "Сгруппировать · Ctrl+G"}</button>
         <button data-action="front">На передний план</button>
@@ -291,7 +296,7 @@ function renderProperties(): void {
   if (!element) {
     props.innerHTML = `<div class="property-title">Слайд</div><div class="property-help">Выберите элемент на холсте, чтобы настроить его.</div>
       ${field("Название","name",slide.name)}
-      <div class="property-section">РАЗМЕР СЛАЙДА</div>
+      <div class="property-section">Размер слайда</div>
       <div class="field-grid">
         ${field("Ширина","viewportWidth",project.viewport.width,"number")}
         ${field("Высота","viewportHeight",project.viewport.height,"number")}
@@ -303,7 +308,7 @@ function renderProperties(): void {
     $("duplicate-slide").addEventListener("click", () => store.update(project => duplicateSlide(project, slide.id)));
     $("delete-slide").addEventListener("click", () => store.update(project => deleteSlide(project, slide.id)));
   } else {
-    props.innerHTML = `<div class="property-title">${escape(element.type.toUpperCase())}</div>
+    props.innerHTML = `<div class="property-title">${escape(({ text: "Текст", shape: "Фигура", image: "Изображение", html: "HTML / JS" } as const)[element.type])}</div>
       <div class="property-help">ID: ${escape(element.id)}</div>
       <div class="field-grid">
         ${field("X","x",element.x,"number")}${field("Y","y",element.y,"number")}
@@ -339,7 +344,7 @@ function renderProperties(): void {
       ${pick("Анимация","animation",element.animation?.type ?? "none",["none","fade","slide-up","zoom"])}
       ${field("Задержка, мс","animationDelay",element.animation?.delay ?? 0,"number")}
       ${field("Длительность, мс","animationDuration",element.animation?.duration ?? 600,"number")}
-      <div class="property-section">КОМПОНОВКА</div>
+      <div class="property-section">Компоновка</div>
       <div class="inspector-actions">
         ${element.groupId ? '<button data-action="ungroup">Разгруппировать</button>' : ""}
         <button data-action="front">На передний план</button>
@@ -690,8 +695,8 @@ $("preview-fullscreen").addEventListener("click", () => {
   }
 });
 document.addEventListener("fullscreenchange", () => {
-  $("preview-fullscreen").textContent = document.fullscreenElement === overlay
-    ? "⛶ Выйти из полного экрана" : "⛶ Полный экран";
+  $("preview-fullscreen").querySelector("span")!.textContent = document.fullscreenElement === overlay
+    ? "Выйти из полного экрана" : "Полный экран";
 });
 
 $("preview-back").addEventListener("click", () => { void player?.previous(); });

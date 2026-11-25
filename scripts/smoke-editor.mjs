@@ -1,6 +1,7 @@
 /** Browser smoke test using an already installed Chrome; no browser download needed. */
 process.env.CORE_PRESENTATION_PDF_DEBUG = "1";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
@@ -28,6 +29,50 @@ try {
     if (!assertion) throw new Error(message);
     console.log("PASS", message);
   };
+
+  // Theme must affect only the studio chrome, never the slide document.
+  const slideBackground = await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background);
+  await page.locator("#theme-picker").selectOption("light");
+  check(await page.locator("html").getAttribute("data-theme") === "light", "Light theme is available");
+  const light = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  await page.locator("#theme-picker").selectOption("dark");
+  check(await page.locator("html").getAttribute("data-theme") === "dark", "Dark theme is available");
+  const dark = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+  check(light !== dark, "Theme changes studio surfaces");
+  check(await page.locator("#editor-stage .cp-slide").evaluate(el => getComputedStyle(el).background) === slideBackground,
+    "Switching themes preserves slide colors");
+  await page.reload();
+  check(await page.locator("#theme-picker").inputValue() === "dark", "Theme choice persists after reload");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.locator("#theme-picker").selectOption("system");
+  check(await page.locator("html").getAttribute("data-theme") === "light", "System mode follows light OS preference");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  check(true, "System mode reacts to OS theme changes");
+  await page.locator("#theme-picker").selectOption("light");
+  check(await page.locator(".sidebar").evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius)) >= 18,
+    "Rounded panel styling is applied");
+  const originalWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
+  await page.locator("#slides-resizer").focus();
+  await page.keyboard.press("ArrowRight");
+  const resizedWidth = await page.locator("#slides-panel").evaluate(el => el.getBoundingClientRect().width);
+  check(resizedWidth > originalWidth, "Slide panel can be resized with keyboard");
+  await page.keyboard.press("ArrowLeft");
+  await page.locator("#toggle-inspector").click();
+  check(await page.locator("#inspector-panel").isHidden(), "Inspector can be collapsed");
+  await page.locator("#toggle-inspector").click();
+  check(await page.locator("#inspector-panel").isVisible(), "Inspector can be restored");
+  await page.locator("#toggle-slides").click();
+  check(await page.locator("#slides-panel").isHidden(), "Slide panel can be collapsed");
+  await page.locator("#toggle-slides").click();
+  check(await page.locator("#slides-panel").isVisible(), "Slide panel can be restored");
+  if (process.env.STUDIO_THEME_SCREENSHOTS) {
+    await mkdir(dirname(process.env.STUDIO_THEME_SCREENSHOTS), { recursive: true });
+    await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-light.png" });
+    await page.locator("#theme-picker").selectOption("dark");
+    await page.screenshot({ path: process.env.STUDIO_THEME_SCREENSHOTS + "-dark.png" });
+    await page.locator("#theme-picker").selectOption("light");
+  }
 
   await page.locator("#add-text").click();
   const selectedBox = page.locator(".selection-box");

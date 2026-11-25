@@ -4,7 +4,11 @@
 
 Create presentations as versioned JSON documents and render them using standard **HTML, CSS and JavaScript**. The player does not require PowerPoint, a backend, a paid service, or the editor to run.
 
-> Status: v1.1 — stable, local-first web studio and MCP engine with optional authenticated Streamable HTTP. Engine, visual studio, grouping, alignment guides, animation timeline, standalone HTML export and an AI-agent MCP server are implemented. This is a foundation, not yet a PowerPoint/Figma feature-complete product.
+> Status: v1.2 — local-first studio with light, dark and system appearance, plus MCP HTTP.
+
+## Studio appearance
+
+The browser studio uses locally bundled Basecoat UI (precompiled Tailwind CSS), neutral color tokens and rounded controls. Choose **Светлая**, **Тёмная** or **Системная** in the toolbar. The choice is saved in the browser; changing it never alters slide colors or export data. See `web/theme.css` for the design tokens and `web/style.css` for the editor layout.
 
 ## Start editing on Windows
 
