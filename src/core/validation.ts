@@ -38,17 +38,26 @@ export function validatePresentation(input: unknown): asserts input is Presentat
       if (!str(slide.name)) fail(path + ".name", "required string");
       if (!str(slide.background)) fail(path + ".background", "required CSS string");
       if (slide.transition !== undefined) {
-        if (!obj(slide.transition) || !oneOf(slide.transition.type, ["none","fade","slide","zoom"]))
+        if (!obj(slide.transition) || !oneOf(slide.transition.type, ["none","fade","slide","zoom","morph"]))
           fail(path + ".transition", "unknown transition");
         else if (slide.transition.duration !== undefined &&
           (!num(slide.transition.duration) || slide.transition.duration < 0))
           fail(path + ".transition.duration", "must be non-negative");
       }
       if (!Array.isArray(slide.elements)) { fail(path + ".elements", "required array"); return; }
+      if (slide.notes !== undefined && !str(slide.notes)) fail(path + ".notes", "must be a string");
+      const morphIds = new Set<string>();
       slide.elements.forEach((element: unknown, j: number) => {
         const p = `${path}.elements[${j}]`;
         if (!obj(element)) { fail(p, "must be object"); return; }
         checkId(element.id, p + ".id");
+        if (element.morphId !== undefined) {
+          if (!str(element.morphId) || !element.morphId.trim()) fail(p + ".morphId", "must be a non-empty string");
+          else if (morphIds.has(element.morphId)) fail(p + ".morphId", "duplicate morph identity on the same slide");
+          else morphIds.add(element.morphId);
+        }
+        if (element.type === "text" && element.fontStyle !== undefined && !oneOf(element.fontStyle, ["normal","italic"])) fail(p + ".fontStyle", "unknown font style");
+        if (element.type === "shape" && element.boxShadow !== undefined && !str(element.boxShadow)) fail(p + ".boxShadow", "must be a CSS string");
         if (!oneOf(element.type, ["text","shape","image","html"])) {
           fail(p + ".type", "unknown element"); return;
         }

@@ -157,6 +157,7 @@ export function duplicateElements(
   const groups = new Map<string, string>();
   for (const copy of copies) {
     copy.id = newId("element");
+    delete copy.morphId; // Copies on the same slide must not share a morph identity.
     copy.x += offset;
     copy.y += offset;
     if (copy.groupId) {

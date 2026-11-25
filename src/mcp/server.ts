@@ -25,7 +25,7 @@ const animation = z.strictObject({
   delay: duration.optional(),
 });
 const transition = z.strictObject({
-  type: z.enum(["none", "fade", "slide", "zoom"]),
+  type: z.enum(["none", "fade", "slide", "zoom", "morph"]),
   duration: duration.optional(),
 });
 const patchSchema = z.strictObject({
@@ -35,6 +35,9 @@ const patchSchema = z.strictObject({
   opacity: z.number().min(0).max(1).optional(),
   zIndex: z.number().int().min(-100000).max(100000).optional(),
   animation: animation.optional(),
+  morphId: id.optional(),
+  fontStyle: z.enum(["normal", "italic"]).optional(),
+  boxShadow: css.optional(),
   text: z.string().max(200000).optional(),
   fontFamily: z.string().max(300).optional(),
   fontSize: z.number().finite().gt(0).max(5000).optional(),
@@ -55,13 +58,13 @@ const patchSchema = z.strictObject({
 type Patch = z.infer<typeof patchSchema>;
 
 const elementTypes: Record<SlideElement["type"], Set<string>> = {
-  text: new Set(["text", "fontFamily", "fontSize", "fontWeight", "lineHeight", "align", "color"]),
-  shape: new Set(["fill", "border", "borderRadius"]),
+  text: new Set(["text", "fontFamily", "fontSize", "fontWeight", "lineHeight", "align", "color", "fontStyle"]),
+  shape: new Set(["fill", "border", "borderRadius", "boxShadow"]),
   image: new Set(["src", "alt", "fit", "borderRadius"]),
   html: new Set(["html", "css", "javascript"]),
 };
 const universalProperties = new Set([
-  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation",
+  "x", "y", "width", "height", "rotation", "opacity", "zIndex", "animation", "morphId",
 ]);
 
 function validatePatch(element: SlideElement, patch: Patch): void {
@@ -99,7 +102,7 @@ function toolError(error: unknown) {
 }
 
 function editSlide(project: Presentation, slideId: string, patch: {
-  name?: string; background?: string; transition?: Transition;
+  name?: string; background?: string; transition?: Transition; notes?: string;
 }): Presentation {
   const copy = structuredClone(project);
   const slide = copy.slides.find(item => item.id === slideId);
@@ -109,7 +112,7 @@ function editSlide(project: Presentation, slideId: string, patch: {
 }
 
 export function createMcpServer(repo: ProjectRepository): McpServer {
-  const server = new McpServer({ name: "core-presentation", version: "1.0.0" });
+  const server = new McpServer({ name: "core-presentation", version: "1.3.0" });
 
   function add<T extends z.ZodRawShape>(
     name: string,
@@ -208,25 +211,28 @@ export function createMcpServer(repo: ProjectRepository): McpServer {
       background: css.optional(),
       index: z.number().int().min(0).max(1000).optional(),
       transition: transition.optional(),
+      notes: z.string().max(20000).optional(),
     }),
-    async ({ project, expectedRevision, name, background, index, transition: movement }) => {
+    async ({ project, expectedRevision, name, background, index, transition: movement, notes }) => {
       const slide = createSlide(name);
       if (background !== undefined) slide.background = background;
       if (movement !== undefined) slide.transition = movement;
+      if (notes !== undefined) slide.notes = notes;
       const record = await repo.mutate(project, p => addSlide(p, slide, index), expectedRevision);
       return afterEdit(record, { slideId: slide.id, name: slide.name });
     });
 
-  add("presentation_update_slide", "Edit a slide's name, background or transition (none/fade/slide/zoom).",
+  add("presentation_update_slide", "Edit a slide's name, background or transition (none/fade/slide/zoom/morph) and speaker notes.",
     z.object({ ...projectField, slideId: id,
       name: z.string().trim().min(1).max(250).optional(),
       background: css.optional(),
       transition: transition.optional(),
+      notes: z.string().max(20000).optional(),
     }),
-    async ({ project, expectedRevision, slideId, name, background, transition: movement }) => {
+    async ({ project, expectedRevision, slideId, name, background, transition: movement, notes }) => {
       const patch = { ...(name !== undefined && { name }),
         ...(background !== undefined && { background }),
-        ...(movement !== undefined && { transition: movement }) };
+        ...(movement !== undefined && { transition: movement }), ...(notes !== undefined && { notes }) };
       const record = await repo.mutate(project, p => editSlide(p, slideId, patch), expectedRevision);
       return afterEdit(record, { slideId });
     });

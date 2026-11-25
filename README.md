@@ -6,6 +6,10 @@ Create presentations as versioned JSON documents and render them using standard 
 
 > Status: v1.2 — local-first studio with light, dark and system appearance, plus MCP HTTP.
 
+## Composer example
+
+See [the 14-scene Composer study](docs/COMPOSER.md), including native morph transitions and an interactive offline widget. Run `npm run demo:composer` to add it to the Studio without replacing existing projects.
+
 ## Studio appearance
 
 The browser studio uses locally bundled Basecoat UI (precompiled Tailwind CSS), neutral color tokens and rounded controls. Choose **Светлая**, **Тёмная** or **Системная** in the toolbar. The choice is saved in the browser; changing it never alters slide colors or export data. See `web/theme.css` for the design tokens and `web/style.css` for the editor layout.

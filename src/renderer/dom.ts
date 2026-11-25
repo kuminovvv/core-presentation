@@ -12,6 +12,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "cp-element";
   wrapper.dataset.elementId = element.id;
+  if (element.morphId) wrapper.dataset.morphId = element.morphId;
   Object.assign(wrapper.style, {
     position: "absolute",
     left: `${element.x}px`,
@@ -33,6 +34,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
         fontFamily: element.fontFamily ?? "Inter, system-ui, sans-serif",
         fontSize: `${element.fontSize ?? 56}px`,
         fontWeight: String(element.fontWeight ?? 500),
+        fontStyle: element.fontStyle ?? "normal",
         color: element.color ?? "#ffffff",
         textAlign: element.align ?? "left",
         lineHeight: String(element.lineHeight ?? 1.2),
@@ -43,6 +45,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
         background: element.fill ?? "#767cff",
         borderRadius: `${element.borderRadius ?? 0}px`,
         border: element.border ?? "none",
+        boxShadow: element.boxShadow ?? "none",
       });
       break;
     case "image": {

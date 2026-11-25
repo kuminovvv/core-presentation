@@ -302,7 +302,8 @@ function renderProperties(): void {
         ${field("Высота","viewportHeight",project.viewport.height,"number")}
       </div>
       ${field("Фон (CSS)","background",slide.background)}
-      ${pick("Переход","transition",slide.transition?.type ?? "fade",["none","fade","slide","zoom"])}
+      ${area("Заметки докладчика","notes",slide.notes)}
+      ${pick("Переход","transition",slide.transition?.type ?? "fade",["none","fade","slide","zoom","morph"])}
       ${field("Длительность, мс","transitionDuration",slide.transition?.duration ?? 450,"number")}
       <div class="inspector-actions"><button id="duplicate-slide">Дублировать слайд</button><button class="danger" id="delete-slide">Удалить слайд</button></div>`;
     $("duplicate-slide").addEventListener("click", () => store.update(project => duplicateSlide(project, slide.id)));
@@ -316,6 +317,8 @@ function renderProperties(): void {
         ${field("Поворот","rotation",element.rotation ?? 0,"number")}
         ${field("Прозрачность","opacity",element.opacity ?? 1,"number")}
       </div>
+      ${field("Связь между слайдами (Morph ID)","morphId",element.morphId)}
+
       ${element.type === "text" ? `
         ${area("Текст","text",element.text)}
         ${field("Размер шрифта","fontSize",element.fontSize ?? 56,"number")}
@@ -323,10 +326,12 @@ function renderProperties(): void {
         ${field("Межстрочный интервал","lineHeight",element.lineHeight ?? 1.2,"number")}
         ${field("Цвет","color",element.color ?? "#fff")}
         ${field("Насыщенность","fontWeight",element.fontWeight ?? 500,"number")}
+        ${pick("Начертание","fontStyle",element.fontStyle ?? "normal",["normal","italic"])}
         ${pick("Выравнивание","align",element.align ?? "left",["left","center","right"])}` : ""}
       ${element.type === "shape" ? `
         ${field("Заливка (CSS)","fill",element.fill)}
         ${field("Граница (CSS)","border",element.border ?? "none")}
+        ${field("Тень (CSS)","boxShadow",element.boxShadow ?? "none")}
         ${field("Скругление","borderRadius",element.borderRadius ?? 0,"number")}` : ""}
       ${element.type === "image" ? `
         <label class="image-upload">Загрузить файл (PNG, JPG, WebP, GIF)
@@ -499,7 +504,8 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
         else if (key === "viewportHeight") next.viewport.height = Number(value);
         else if (key === "name") target.name = String(value);
         else if (key === "background") target.background = String(value);
-        else if (key === "transition") target.transition = { ...target.transition, type: value as "none"|"fade"|"slide"|"zoom" };
+        else if (key === "notes") target.notes = String(value);
+        else if (key === "transition") target.transition = { ...target.transition, type: value as "none"|"fade"|"slide"|"zoom"|"morph" };
         else if (key === "transitionDuration") target.transition = { type: target.transition?.type ?? "fade", duration: Number(value) };
         return next;
       });
@@ -510,7 +516,7 @@ function applyProperty(input: HTMLInputElement | HTMLSelectElement | HTMLTextAre
         animation: { type: element.animation?.type ?? "fade", duration: element.animation?.duration ?? 600, delay: Number(value) }
       } : key === "animationDuration" ? {
         animation: { type: element.animation?.type ?? "fade", duration: Number(value), delay: element.animation?.delay ?? 0 }
-      } : { [key]: value };
+      } : key === "morphId" ? { morphId: String(value).trim() || undefined } : { [key]: value };
       store.update(project => updateElement(project, element.id, patch as Partial<SlideElement>));
     }
   } catch (error) { alert(error instanceof Error ? error.message : String(error)); render(); }
