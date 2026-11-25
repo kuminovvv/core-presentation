@@ -92,7 +92,7 @@ const sync = new ProjectSync({
       applyingRemote = false;
     }
   },
-  canApplyRemote: () => !document.hidden && !$<HTMLDialogElement>("slide-source-dialog").open && !document.documentElement.classList.contains("timeline-dragging") &&
+  canApplyRemote: () => !document.hidden && !$<HTMLDialogElement>("slide-source-dialog").open && !document.querySelector(".studio-context-menu:not([hidden])") && !document.documentElement.classList.contains("timeline-dragging") &&
     !document.querySelector(".studio-select-component [aria-expanded=true]") &&
     !document.activeElement?.matches("input,textarea,select,[contenteditable='true']"),
   onState: state => {
@@ -295,7 +295,7 @@ function iconButton(action:string, label:string, icon:string, pressed?:boolean):
 function layoutControls(slide: Slide, project: Presentation): string {
   const l=slide.layout;
   const row=l?.direction==="row";
-  const directions=[["free","Свободное позиционирование","free"],["row","Горизонтальное направление","row"],["column","Вертикальное направление","column"]];
+  const directions=[["free","Свободное позиционирование","free"],["row","Горизонтальное направление","row"],["column","Вертикальное направление","column"]] as const;
   const values=["start","center","end"] as const;
   return '<div class="property-section layout-heading"><span>Auto Layout</span>'+ (l?iconButton("layout-direction-free","Отключить Auto Layout","free"):iconButton("layout-direction-column","Добавить Auto Layout","column"))+'</div>'+
     '<div class="layout-control-row"><span>Направление</span><div class="icon-segment" role="group" aria-label="Направление">'+
