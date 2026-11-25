@@ -6,7 +6,7 @@ import {
 } from "../src";
 import type { ElementKind, Presentation, Slide, SlideElement, AutoLayout, FrameElement } from "../src";
 import { initFrameTool } from "./frame-tool";
-import { insertFrame, containingFrame, descendants, rootSelection } from "../src/core/frames";
+import { insertFrame, containingFrame, descendants, rootSelection, parentLayout, isManaged, reorderFrameChild } from "../src/core/frames";
 import { defaultSlideLayout, isFlowElement, layoutOverflows, reorderLayoutAt, stepLayoutOrder } from "../src";
 import { demoPresentation } from "../src/demo";
 import { CanvasInteractions } from "./canvas-interactions";
@@ -60,6 +60,17 @@ const canvas = new CanvasInteractions(stage, {
   commit: (patches, mode) => store.update(project => {
     const slide = project.slides.find(s => s.id === slideId);
     const moving = slide?.elements.filter(e => Object.prototype.hasOwnProperty.call(patches, e.id)) ?? [];
+    if(mode==="move"&&slide&&moving.length===1&&!moving[0]!.groupId){
+      const original=moving[0]!, candidate={...original,...patches[original.id]!};
+      const target=containingFrame(slide,candidate,descendants(slide,[original.id]));
+      if(target?.id!==original.parentId){
+        return updateElement(project,original.id,{...patches[original.id],parentId:target?.id});
+      }
+      if(original.parentId&&isManaged(slide,original)){
+        const layout=parentLayout(slide,original)!;
+        return reorderFrameChild(project,slideId,original.id,layout.direction==="row"?candidate.x+candidate.width/2:candidate.y+candidate.height/2);
+      }
+    }
     if (mode === "move" && slide?.layout) {
       const flow = moving.filter(e => isFlowElement(slide, e));
       const free = Object.fromEntries(moving.filter(e => !isFlowElement(slide, e)).map(e => [e.id, patches[e.id]!]));
@@ -70,14 +81,7 @@ const canvas = new CanvasInteractions(stage, {
       }
       return next;
     }
-    let next=updateElements(project, patches);
-    if(mode==="move"&&slide&&moving.length===1){
-      const current=next.slides.find(s=>s.id===slideId)!;
-      const e=current.elements.find(e=>e.id===moving[0]!.id)!;
-      if(!e.groupId){const parent=containingFrame(current,e,descendants(current,[e.id]));
-        if(parent?.id!==e.parentId)next=updateElement(next,e.id,{parentId:parent?.id});}
-    }
-    return next;
+    return updateElements(project, patches);
   }),
   selectionChanged: () => { renderProperties(); renderTimeline(); renderLayers(); },
 });
@@ -327,8 +331,8 @@ function iconNumber(label:string,key:string,value:number,icon:string):string{
   return '<label class="icon-number" title="'+escape(label)+'">'+inspectorIcon(icon)+'<input type="number" min="0" max="10000" data-field="'+key+'" aria-label="'+escape(label)+'" value="'+value+'"></label>';
 }
 function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
-  if (!slide.layout || !elements.length) return "";
-  const flowing=elements.every(e=>isFlowElement(slide,e));
+  if (!elements.length || !elements.every(e=>parentLayout(slide,e))) return "";
+  const flowing=elements.every(e=>isManaged(slide,e));
   return '<div class="property-section layout-heading"><span>Auto Layout</span>'+iconButton(flowing?"layout-absolute":"layout-flow",flowing?"Абсолютная позиция":"Вернуть в поток","absolute",!flowing)+'</div>'+
     '<div class="layout-control-row"><span>'+(flowing?"В потоке":"Абсолютно")+'</span><div class="icon-segment">'+
     iconButton("layout-settings","Настройки макета","column")+'</div></div>';
@@ -341,12 +345,15 @@ function frameInspector(e:FrameElement,slide:Slide,project:Presentation):string{
   const fold=(title:string,body:string,open=false)=>'<details class="frame-section" '+(open?'open':'')+'><summary>'+title+'<span class="frame-disclosure">+</span></summary>'+body+'</details>';
   return '<div class="frame-inspector">'+
     '<div class="frame-heading"><strong>Frame</strong><div class="icon-segment">'+iconButton("source-code","Код слайда","code")+iconButton("frame-layout-toggle","Auto Layout","column",!!e.layout)+'</div></div>'+
-    section("Положение",field("Название","name",e.name??"Frame")+pair(n("X","x",e.x),n("Y","y",e.y)))+
+    section("Положение",'<span class="frame-label">Выравнивание</span><div class="icon-segment alignment-tools">'+
+      [["left","По левому краю","left"],["center-x","По центру горизонтально","centerX"],["right","По правому краю","right"],["top","По верхнему краю","top"],["center-y","По центру вертикально","centerY"],["bottom","По нижнему краю","bottom"]].map(([key,label,icon])=>iconButton("frame-align-"+key,label!,icon!)).join("")+'</div>'+
+      field("Название","name",e.name??"Frame")+pair(n("X","x",e.x),n("Y","y",e.y)))+
+    itemLayoutControls(slide,[e])+
     section("Layout",layoutControls(layoutSlide,{...project,viewport:{width:e.width,height:e.height}})+
       '<span class="frame-label">Размеры</span>'+pair(n("W","width",e.width),n("H","height",e.height))+
       '<label class="frame-check"><input type="checkbox" data-field="clipContent" '+(e.clipContent?'checked':'')+'> Обрезать содержимое</label>')+
     section("Внешний вид",pair(n("%","frameOpacity",Math.round((e.opacity??1)*100),"Непрозрачность"),n("⌜","borderRadius",e.borderRadius??0,"Скругление")))+
-    fold("Заливка",'<div class="frame-fill">'+field("Цвет (CSS)","fill",e.fill??"transparent")+'</div>',true)+
+    fold("Заливка",'<div class="frame-fill"><input aria-label="Цвет заливки" title="Выбрать цвет" type="color" data-field="fill" value="'+(/^#[0-9a-f]{6}$/i.test(e.fill??"")?escape(e.fill):"#ffffff")+'">'+field("Цвет (CSS)","fill",e.fill??"transparent")+iconButton("frame-fill-clear","Убрать заливку","trash")+'</div>',true)+
     fold("Обводка",field("Граница (CSS)","border",e.border??"none"),!!e.border&&e.border!=="none")+
     fold("Эффекты",field("Тень (CSS)","boxShadow",e.boxShadow??"none"),!!e.boxShadow&&e.boxShadow!=="none")+
     fold("Анимация",pick("Эффект","animation",e.animation?.type??"none",["none","fade","slide-up","zoom"])+field("Задержка, мс","animationDelay",e.animation?.delay??0,"number")+field("Длительность, мс","animationDuration",e.animation?.duration??600,"number"))+
@@ -389,6 +396,7 @@ function renderProperties(): void {
     bindActions();
     props.querySelectorAll<HTMLInputElement|HTMLSelectElement>("[data-field]").forEach(input=>input.addEventListener("change",()=>applyProperty(input)));
     enhanceSelects(props);
+    if(isManaged(slide,element))props.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input[data-field="x"],input[data-field="y"],button[data-action^="frame-align-"]').forEach(control=>{control.disabled=true;control.title="Управляется Auto Layout";});
     return;
   }
   if (canvas.ids.length > 1) {
@@ -471,7 +479,7 @@ function renderProperties(): void {
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
     .forEach(input => input.addEventListener("change", () => applyProperty(input)));
   enhanceSelects(props);
-  if (element && isFlowElement(slide, element)) {
+  if (element && isManaged(slide, element)) {
     props.querySelectorAll<HTMLInputElement>('input[data-field="x"],input[data-field="y"]').forEach(input => { input.disabled = true; input.title = "Управляется Auto Layout"; });
   }
   const fileInput = props.querySelector<HTMLInputElement>("#image-upload");
@@ -583,6 +591,15 @@ function runAction(action: string): void {
   if (action==="source-code"){sourceEditor.open();return;}
   const frame=canvas.ids.length===1?slide.elements.find(e=>e.id===canvas.primaryId&&e.type==="frame") as FrameElement|undefined:undefined;
   if(action==="frame-selection"){const chosen=slide.elements.filter(e=>rootSelection(slide,canvas.ids).includes(e.id));if(chosen.length&&new Set(chosen.map(e=>e.parentId)).size===1)makeFrame(unionBounds(chosen),chosen.map(e=>e.id));return;}
+  if(frame&&action==="frame-fill-clear"){store.update(p=>updateElement(p,frame.id,{fill:"transparent"}));return;}
+  if(frame&&action.startsWith("frame-align-")){
+    if(isManaged(slide,frame))return;
+    const parent=slide.elements.find(e=>e.id===frame.parentId),viewport=store.value.viewport;
+    const box=parent??{x:0,y:0,...viewport};
+    const axis=action.slice("frame-align-".length);
+    const patch:Partial<FrameElement>=axis==="left"?{x:box.x}:axis==="right"?{x:box.x+box.width-frame.width}:axis==="center-x"?{x:box.x+(box.width-frame.width)/2}:axis==="top"?{y:box.y}:axis==="bottom"?{y:box.y+box.height-frame.height}:{y:box.y+(box.height-frame.height)/2};
+    store.update(p=>updateElement(p,frame.id,patch));return;
+  }
   if(action==="frame-layout-toggle"){if(frame)store.update(p=>updateElement(p,frame.id,{layout:frame.layout?undefined:{...defaultSlideLayout,paddingX:16,paddingY:16}}));return;}
   if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||action==="layout-space-between"){
     store.update(project=>{
@@ -605,9 +622,15 @@ function runAction(action: string): void {
   if (!canvas.ids.length) return;
   const ids = canvas.ids;
   const elements = slide.elements.filter(e => ids.includes(e.id));
-  if (action === "layout-settings") { canvas.clear(); return; }
+  if (action === "layout-settings") { const parent=elements[0]?.parentId; if(parent)canvas.select([parent]);else canvas.clear(); return; }
   if (action === "layout-previous" || action === "layout-next") {
-    store.update(project => stepLayoutOrder(project, slide.id, ids, action === "layout-previous" ? -1 : 1));
+    const item=elements.length===1?elements[0]:undefined;
+    const layout=item?parentLayout(slide,item):undefined;
+    if(item?.parentId&&layout&&!item.groupId){
+      const siblings=slide.elements.filter(e=>e.parentId===item.parentId&&isManaged(slide,e));
+      const step=action==="layout-previous"?-1:1,target=siblings[siblings.indexOf(item)+step];
+      if(target)store.update(p=>reorderFrameChild(p,slide.id,item.id,(layout.direction==="row"?target.x+target.width/2:target.y+target.height/2)+step*.01));
+    }else store.update(project => stepLayoutOrder(project, slide.id, ids, action === "layout-previous" ? -1 : 1));
     return;
   }
   if (action === "layout-absolute" || action === "layout-flow") {
@@ -970,7 +993,7 @@ function openObjectMenu(x:number,y:number){
   const {slide}=selected();if(!slide)return;
   const elements=slide.elements.filter(e=>canvas.ids.includes(e.id));
   const grouped=elements.some(e=>e.groupId);
-  const flow=elements.some(e=>isFlowElement(slide,e));
+  const flow=elements.some(e=>isManaged(slide,e));
   const groups:MenuItem[][]=[];
   if(elements.length){
     groups.push([
@@ -982,7 +1005,7 @@ function openObjectMenu(x:number,y:number){
       {action:"front",label:"На передний план",icon:"layers"},
       {action:"back",label:"На задний план",icon:"layers"},
     ]);
-    if(slide.layout)groups.push([
+    if(elements.every(e=>parentLayout(slide,e)))groups.push([
       {action:flow?"layout-absolute":"layout-flow",label:flow?"Абсолютная позиция":"Вернуть в Auto Layout",icon:"absolute"},
       ...(flow?[{action:"layout-previous",label:"Переместить раньше",icon:"left"},{action:"layout-next",label:"Переместить позже",icon:"right"}]:[]),
       {action:"layout-settings",label:"Настройки Auto Layout",icon:"column"},

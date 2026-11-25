@@ -311,3 +311,10 @@ button:focus-visible,summary:focus-visible,label.button:focus-within,input:focus
 .frame-check{display:flex;align-items:center;gap:7px;font-size:12px;}
 .frame-check input{width:16px;height:16px;accent-color:var(--primary);}
 .frame-section .field input{min-height:34px;border-radius:8px;}
+
+.frame-inspector .layout-heading:not(.frame-section .layout-heading){padding:10px 12px;margin:0;}
+.frame-inspector > .layout-control-row{padding:0 12px 10px;}
+.frame-fill{display:flex;gap:6px;align-items:center;min-width:0;}
+.frame-fill .field{flex:1;min-width:0;}
+.frame-fill>input[type=color]{width:28px;height:32px;padding:2px;border:1px solid var(--border);background:var(--muted);border-radius:7px;flex:none;}
+.frame-fill .icon-control{flex:none;}

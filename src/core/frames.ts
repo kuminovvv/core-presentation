@@ -25,7 +25,7 @@ export function insertFrame(project:Presentation,slideId:string,frame:FrameEleme
   frame={...frame,parentId:parent?.id};
   const adopt=new Set(roots??slide.elements.filter(e=>e.parentId===frame.parentId&&contains(frame,e)).map(e=>e.id));
   const incomplete=new Set(slide.elements.filter(e=>e.groupId&&!adopt.has(e.id)).map(e=>e.groupId));
-  for(const e of slide.elements)if(adopt.has(e.id)&&!incomplete.has(e.groupId)){e.parentId=frame.id;e.groupId=undefined;}
+  for(const e of slide.elements)if(adopt.has(e.id)&&!incomplete.has(e.groupId)){e.parentId=frame.id;}
   slide.elements.push(frame);return next;
 }
 export function translateFrameChildren(before:Presentation,after:Presentation,patches:Readonly<Record<string,Partial<SlideElement>>>):void{
@@ -44,4 +44,26 @@ export function translateFrameChildren(before:Presentation,after:Presentation,pa
     }
     slide.elements.forEach(visit);
   }
+}
+
+export function parentLayout(slide:Slide,element:SlideElement){
+  const parent=slide.elements.find(e=>e.id===element.parentId);
+  return parent?.type==="frame"?parent.layout:slide.layout;
+}
+export function isManaged(slide:Slide,element:SlideElement):boolean{
+  return Boolean(parentLayout(slide,element)&&element.layoutPosition!=="absolute"&&
+    (!element.groupId||!slide.elements.some(e=>e.parentId===element.parentId&&e.groupId===element.groupId&&e.layoutPosition==="absolute")));
+}
+/** Reorder a single ungrouped item among direct siblings, using its proposed center. */
+export function reorderFrameChild(project:Presentation,slideId:string,elementId:string,coordinate:number):Presentation{
+  const next=structuredClone(project),slide=next.slides.find(s=>s.id===slideId);
+  const item=slide?.elements.find(e=>e.id===elementId);
+  if(!slide||!item||!item.parentId||item.groupId||!isManaged(slide,item))return project;
+  const layout=parentLayout(slide,item)!;
+  const siblings=slide.elements.filter(e=>e.parentId===item.parentId&&e.id!==item.id&&isManaged(slide,e));
+  const target=siblings.find(e=>coordinate<(layout.direction==="row"?e.x+e.width/2:e.y+e.height/2));
+  const ordered=slide.elements.filter(e=>e.id!==item.id);
+  const last=siblings.at(-1);
+  const index=target?ordered.indexOf(target):last?ordered.indexOf(last)+1:ordered.length;
+  ordered.splice(index,0,item);slide.elements=ordered;return next;
 }

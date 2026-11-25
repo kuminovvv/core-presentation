@@ -406,6 +406,9 @@ try {
   check(await page.locator("#editor-stage .cp-frame > .cp-element").evaluate(el=>parseFloat(el.style.left))===25,"Frame Auto Layout controls child position");
   await page.locator('input[data-field="clipContent"]').uncheck();
   check(await page.locator("#editor-stage .cp-frame").evaluate(el=>getComputedStyle(el).overflow)==="visible","Clip content can be toggled");
+  await page.locator('[data-action="frame-align-left"]').click();
+  check(await page.locator("#editor-stage .cp-frame").evaluate(el=>parseFloat(el.style.left))===0,"Frame aligns to slide edge");
+  if(process.env.STUDIO_THEME_SCREENSHOTS)await page.screenshot({path:process.env.STUDIO_THEME_SCREENSHOTS+"-frame.png"});
   check(errors.length === 0, "No uncaught browser errors: " + errors.join("; "));
   console.log("Browser smoke test passed.");
 } finally {
