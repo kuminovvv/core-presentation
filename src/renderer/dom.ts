@@ -9,7 +9,7 @@ function customDocument(element: HtmlElement): string {
 }
 
 /** Constructs a real DOM node; text is inserted as textContent, not HTML. */
-export function createElementNode(element: SlideElement): HTMLElement {
+export function createElementNode(element: SlideElement, interactive = true): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "cp-element";
   wrapper.dataset.elementId = element.id;
@@ -64,7 +64,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
     }
     case "html": {
       const frame = document.createElement("iframe");
-      frame.setAttribute("sandbox", "allow-scripts");
+      frame.setAttribute("sandbox", interactive ? "allow-scripts" : "");
       frame.setAttribute("title", "Custom slide content");
       frame.srcdoc = customDocument(element);
       frame.style.cssText = "display:block;width:100%;height:100%;border:0";
@@ -75,7 +75,7 @@ export function createElementNode(element: SlideElement): HTMLElement {
   return wrapper;
 }
 
-export function createSlideNode(slide: Slide, project: Presentation): HTMLElement {
+export function createSlideNode(slide: Slide, project: Presentation, interactive = true): HTMLElement {
   slide = resolveSlideLayout(slide, project.viewport);
   const layer = document.createElement("div");
   layer.className = "cp-slide";
@@ -88,6 +88,6 @@ export function createSlideNode(slide: Slide, project: Presentation): HTMLElemen
     overflow: "hidden",
     background: slide.background,
   });
-  for (const element of slide.elements) layer.append(createElementNode(element));
+  for (const element of slide.elements) layer.append(createElementNode(element, interactive));
   return layer;
 }

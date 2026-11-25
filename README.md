@@ -10,6 +10,10 @@ Create presentations as versioned JSON documents and render them using standard 
 
 See [the 14-scene Composer study](docs/COMPOSER.md), including native morph transitions and an interactive offline widget. Run `npm run demo:composer` to add it to the Studio without replacing existing projects.
 
+## Slide source and context menu
+
+Right-click an object on the canvas or use the inspector's three-dot menu for grouping, layering, duplication, deletion and layout order. The **Код** toolbar button opens the current slide source. JSON is the editable native document; changing HTML/CSS/JS converts a native slide into a single full-slide HTML widget only after confirmation. Undo restores the native document. Existing full-slide widgets can be edited directly. Scripts run inside sandboxed iframes in presentation mode, not on the editor canvas. HTML conversion is not a round-trip parser for native objects or animations.
+
 ## Slide Auto Layout
 
 Clear selection to open slide properties, then choose **Auto Layout → Направление**. Horizontal and vertical modes arrange editable objects in document order with gap, horizontal/vertical padding, cross-axis alignment, and main-axis distribution (including space-between). Drag managed objects along the layout axis to reorder, or use the inspector's Earlier/Later controls. Grouped objects are treated as one item. Switch any selected object/group to absolute positioning to place decorative overlays freely. Geometry reflows when item dimensions or membership change and is stored in the same document for preview, HTML/PDF and MCP. Switch back to Free to keep the current positions without automatic arrangement.

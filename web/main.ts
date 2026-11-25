@@ -13,6 +13,10 @@ import { ProjectSync } from "./project-sync";
 import { createLayoutSlide } from "../src/editor/layouts";
 import type { SlideLayout } from "../src/editor/layouts";
 import "./style.css";
+import { inspectorIcon } from "./inspector-icons";
+import { createContextMenu } from "./context-menu";
+import type { MenuItem } from "./context-menu";
+import { initSlideSource } from "./slide-source";
 import { initTheme } from "./theme";
 import { initPanels } from "./panels";
 import { enhanceSelects, syncSelect } from "./selects";
@@ -88,7 +92,7 @@ const sync = new ProjectSync({
       applyingRemote = false;
     }
   },
-  canApplyRemote: () => !document.hidden && !document.documentElement.classList.contains("timeline-dragging") &&
+  canApplyRemote: () => !document.hidden && !$<HTMLDialogElement>("slide-source-dialog").open && !document.documentElement.classList.contains("timeline-dragging") &&
     !document.querySelector(".studio-select-component [aria-expanded=true]") &&
     !document.activeElement?.matches("input,textarea,select,[contenteditable='true']"),
   onState: state => {
@@ -254,7 +258,7 @@ function render(): void {
   stage.style.width = project.viewport.width + "px";
   stage.style.height = project.viewport.height + "px";
   const current = project.slides.find(s => s.id === slideId);
-  if (current) stage.append(createSlideNode(current, project));
+  if (current) stage.append(createSlideNode(current, project, false));
   stage.querySelectorAll("iframe").forEach(iframe => iframe.style.pointerEvents = "none");
   fit();
   canvas.refresh();
@@ -284,33 +288,41 @@ function pick(label: string, key: string, value: string, choices: string[]): str
     `<option value="${choice}" ${choice === value ? "selected" : ""}>${escape(choice)}</option>`).join("")}</select></label>`;
 }
 
-function layoutPick(label: string, key: string, value: string, options: Record<string,string>): string {
-  return '<label class="field"><span>' + escape(label) + '</span><select data-field="' + key + '">' +
-    Object.entries(options).map(([id,label]) => '<option value="' + id + '"' + (id === value ? ' selected' : '') + '>' + escape(label) + '</option>').join("") +
-    '</select></label>';
+function iconButton(action:string, label:string, icon:string, pressed?:boolean):string {
+  return '<button type="button" class="btn icon-control" data-variant="ghost" data-action="'+action+'" title="'+escape(label)+'" aria-label="'+escape(label)+'"'+
+    (pressed===undefined?'':' aria-pressed="'+pressed+'"')+'>'+inspectorIcon(icon)+'</button>';
 }
 function layoutControls(slide: Slide, project: Presentation): string {
-  const l = slide.layout;
-  return '<div class="property-section">Auto Layout</div>' +
-    layoutPick("Направление", "layoutDirection", l?.direction ?? "free", {free:"Свободное",row:"Горизонтально",column:"Вертикально"}) +
-    (l ? '<div class="field-grid">' + field("Интервал, px","layoutGap",l.gap,"number") +
-    field("Отступы X, px","layoutPaddingX",l.paddingX,"number") + field("Отступы Y, px","layoutPaddingY",l.paddingY,"number") + '</div>' +
-    layoutPick("Выравнивание поперёк", "layoutAlign", l.align, {start:"Начало",center:"Центр",end:"Конец"}) +
-    layoutPick("Распределение вдоль", "layoutJustify", l.justify, {start:"Начало",center:"Центр",end:"Конец","space-between":"Равномерно"}) +
-    '<div class="property-help">Перетаскивайте объекты для смены порядка. Размеры остаются фиксированными.</div>' +
-    (layoutOverflows(slide,project.viewport) ? '<div class="layout-warning" role="status">Объекты выходят за границы макета. Уменьшите размеры, интервалы или отступы.</div>' : '') : '');
+  const l=slide.layout;
+  const row=l?.direction==="row";
+  const directions=[["free","Свободное позиционирование","free"],["row","Горизонтальное направление","row"],["column","Вертикальное направление","column"]];
+  const values=["start","center","end"] as const;
+  return '<div class="property-section layout-heading"><span>Auto Layout</span>'+ (l?iconButton("layout-direction-free","Отключить Auto Layout","free"):iconButton("layout-direction-column","Добавить Auto Layout","column"))+'</div>'+
+    '<div class="layout-control-row"><span>Направление</span><div class="icon-segment" role="group" aria-label="Направление">'+
+    directions.map(([id,label,icon])=>iconButton("layout-direction-"+id,label,icon,(l?.direction??"free")===id)).join("")+'</div></div>'+
+    (l?'<div class="layout-alignment-row"><div class="layout-alignment" role="group" aria-label="Выравнивание объектов">'+
+    values.flatMap((y,iy)=>values.map((x,ix)=>{
+      const align=row?y:x,justify=row?x:y;
+      const active=l.align===align&&l.justify===justify;
+      const label=["Сверху","По центру вертикально","Снизу"][iy]+" · "+["Слева","По центру горизонтально","Справа"][ix];
+      return '<button type="button" class="layout-dot" data-action="layout-point-'+align+'-'+justify+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+active+'"><span></span></button>';
+    })).join("")+'</div><div class="layout-spacing">'+
+    iconNumber("Интервал","layoutGap",l.gap,"gap")+
+    iconButton("layout-space-between","Равномерное распределение","distribute",l.justify==="space-between")+'</div></div>'+
+    '<div class="field-grid">'+iconNumber("Отступы по X","layoutPaddingX",l.paddingX,"paddingX")+iconNumber("Отступы по Y","layoutPaddingY",l.paddingY,"paddingY")+'</div>'+
+    '<div class="property-help">Перетащите объект, чтобы изменить порядок.</div>'+
+    (layoutOverflows(slide,project.viewport)?'<div class="layout-warning" role="status">Объекты выходят за границы макета.</div>':''):'');
+}
+function iconNumber(label:string,key:string,value:number,icon:string):string{
+  return '<label class="icon-number" title="'+escape(label)+'">'+inspectorIcon(icon)+'<input type="number" min="0" max="10000" data-field="'+key+'" aria-label="'+escape(label)+'" value="'+value+'"></label>';
 }
 function itemLayoutControls(slide: Slide, elements: SlideElement[]): string {
   if (!slide.layout || !elements.length) return "";
-  const flowing = elements.every(e => isFlowElement(slide,e));
-  return '<div class="property-section">Auto Layout</div><div class="property-help">' +
-    (flowing ? "Положение определяется макетом." : "Свободное позиционирование вне потока.") +
-    '</div><div class="inspector-actions">' +
-    (flowing ? '<div class="layout-order"><button data-action="layout-previous">Раньше</button><button data-action="layout-next">Позже</button></div>' : '') +
-    '<button data-action="' + (flowing ? "layout-absolute" : "layout-flow") + '">' + (flowing ? "Абсолютная позиция" : "Вернуть в Auto Layout") +
-    '</button><button data-action="layout-settings">Настройки макета слайда</button></div>';
+  const flowing=elements.every(e=>isFlowElement(slide,e));
+  return '<div class="property-section layout-heading"><span>Auto Layout</span>'+iconButton(flowing?"layout-absolute":"layout-flow",flowing?"Абсолютная позиция":"Вернуть в поток","absolute",!flowing)+'</div>'+
+    '<div class="layout-control-row"><span>'+(flowing?"В потоке":"Абсолютно")+'</span><div class="icon-segment">'+
+    iconButton("layout-settings","Настройки макета","column")+'</div></div>';
 }
-
 function renderProperties(): void {
   const { project, slide, element } = selected();
   if (!slide) {
@@ -319,28 +331,15 @@ function renderProperties(): void {
   }
   if (canvas.ids.length > 1) {
     const elements = slide.elements.filter(e => canvas.ids.includes(e.id));
-    const groups = new Set(elements.map(e => e.groupId));
-    const alreadyGrouped = groups.size === 1 && Boolean(elements[0]?.groupId);
     props.innerHTML = `<div class="property-title">Выделено: ${elements.length}</div>
       <div class="property-help">Shift + щелчок или выделение рамкой · Ctrl+G для группы</div>
       ${itemLayoutControls(slide, elements)}
       <div class="property-section">Выравнивание</div>
-      <div class="align-grid">
-        <button data-action="align-left" title="По левому краю">⇤ Слева</button>
-        <button data-action="align-center-x" title="По центру горизонтально">↔ Центр</button>
-        <button data-action="align-right" title="По правому краю">Справа ⇥</button>
-        <button data-action="align-top" title="По верхнему краю">⇡ Сверху</button>
-        <button data-action="align-center-y" title="По центру вертикально">↕ Центр</button>
-        <button data-action="align-bottom" title="По нижнему краю">Снизу ⇣</button>
+      <div class="icon-segment alignment-tools">
+        ${iconButton("align-left","По левому краю","left")}${iconButton("align-center-x","По центру горизонтально","centerX")}${iconButton("align-right","По правому краю","right")}
+        ${iconButton("align-top","По верхнему краю","top")}${iconButton("align-center-y","По центру вертикально","centerY")}${iconButton("align-bottom","По нижнему краю","bottom")}
       </div>
-      <div class="property-section">Компоновка</div>
-      <div class="inspector-actions">
-        <button data-action="${alreadyGrouped ? "ungroup" : "group"}">${alreadyGrouped ? "Разгруппировать" : "Сгруппировать · Ctrl+G"}</button>
-        <button data-action="front">На передний план</button>
-        <button data-action="back">На задний план</button>
-        <button data-action="duplicate">Дублировать · Ctrl+D</button>
-        <button class="danger" data-action="delete">Удалить выбранное</button>
-      </div>`;
+      <div class="property-help">ПКМ по объекту — действия с выделением.</div>`;
     bindActions();
     if (elements.some(e => isFlowElement(slide,e))) props.querySelectorAll<HTMLButtonElement>('[data-action^="align-"]').forEach(button => { button.disabled = true; button.title = "Используйте настройки Auto Layout"; });
     return;
@@ -359,6 +358,7 @@ function renderProperties(): void {
       ${pick("Переход","transition",slide.transition?.type ?? "fade",["none","fade","slide","zoom","morph"])}
       ${field("Длительность, мс","transitionDuration",slide.transition?.duration ?? 450,"number")}
       <div class="inspector-actions"><button id="duplicate-slide">Дублировать слайд</button><button class="danger" id="delete-slide">Удалить слайд</button></div>`;
+    bindActions();
     $("duplicate-slide").addEventListener("click", () => store.update(project => duplicateSlide(project, slide.id)));
     $("delete-slide").addEventListener("click", () => store.update(project => deleteSlide(project, slide.id)));
   } else {
@@ -403,14 +403,7 @@ function renderProperties(): void {
       ${pick("Анимация","animation",element.animation?.type ?? "none",["none","fade","slide-up","zoom"])}
       ${field("Задержка, мс","animationDelay",element.animation?.delay ?? 0,"number")}
       ${field("Длительность, мс","animationDuration",element.animation?.duration ?? 600,"number")}
-      <div class="property-section">Компоновка</div>
-      <div class="inspector-actions">
-        ${element.groupId ? '<button data-action="ungroup">Разгруппировать</button>' : ""}
-        <button data-action="front">На передний план</button>
-        <button data-action="back">На задний план</button>
-        <button data-action="duplicate">Дублировать · Ctrl+D</button>
-        <button class="danger" data-action="delete">Удалить элемент</button>
-      </div>`;
+      <div class="property-help">ПКМ по объекту — компоновка, слои и дублирование.</div>`;
     bindActions();
   }
   props.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[data-field]")
@@ -524,7 +517,27 @@ function bindActions(): void {
 
 function runAction(action: string): void {
   const { slide } = selected();
-  if (!slide || !canvas.ids.length) return;
+  if (!slide) return;
+  if (action==="source-code"){sourceEditor.open();return;}
+  if (action.startsWith("layout-direction-")||action.startsWith("layout-point-")||action==="layout-space-between"){
+    store.update(project=>{
+      const target=project.slides.find(s=>s.id===slide.id)!;
+      if(action.startsWith("layout-direction-")){
+        const direction=action.slice("layout-direction-".length);
+        target.layout=direction==="free"?undefined:{...defaultSlideLayout,...target.layout,direction:direction as AutoLayout["direction"]};
+      }else if(target.layout){
+        if(action==="layout-space-between")target.layout.justify=target.layout.justify==="space-between"?"start":"space-between";
+        else{
+          const [, ,align,justify]=action.split("-");
+          target.layout.align=align as AutoLayout["align"];
+          target.layout.justify=justify as AutoLayout["justify"];
+        }
+      }
+      return project;
+    });
+    return;
+  }
+  if (!canvas.ids.length) return;
   const ids = canvas.ids;
   const elements = slide.elements.filter(e => ids.includes(e.id));
   if (action === "layout-settings") { canvas.clear(); return; }
@@ -556,6 +569,7 @@ function runAction(action: string): void {
     return;
   }
   if (action === "group") {
+    if (ids.length<2) return;
     store.update(project => groupElements(project, slide.id, ids));
     return;
   }
@@ -830,6 +844,7 @@ document.addEventListener("fullscreenchange", () => {
 
 $("preview-back").addEventListener("click", () => { void player?.previous(); });
 window.addEventListener("keydown", event => {
+  if ($<HTMLDialogElement>("slide-source-dialog").open || (event.target as HTMLElement)?.closest(".studio-context-menu")) return;
   if (event.key === "Escape" && player) { closePreview(); return; }
   const typing = Boolean((event.target as HTMLElement)?.closest("input, textarea, select, .studio-select, .timeline-bar, .timeline-track[data-empty], [role=separator], [contenteditable='true']"));
   if (typing || player) return;
@@ -845,6 +860,8 @@ window.addEventListener("keydown", event => {
     event.preventDefault(); store.redo();
   } else if (command && key === "a") {
     event.preventDefault(); canvas.select(selected().slide?.elements.map(el => el.id) ?? []);
+  } else if (event.shiftKey && key === "a" && !command) {
+    event.preventDefault(); runAction("layout-direction-column"); canvas.clear();
   } else if (command && key === "g" && canvas.ids.length) {
     event.preventDefault(); runAction(event.shiftKey ? "ungroup" : "group");
   } else if (command && key === "d" && canvas.ids.length) {
@@ -870,6 +887,54 @@ window.addEventListener("keydown", event => {
     } else store.update(project => updateElements(project, patches));
   }
 });
+
+const sourceEditor=initSlideSource({
+  current:selected,
+  apply:project=>{canvas.clear();store.replace(project);}
+});
+$("slide-source").addEventListener("click",()=>sourceEditor.open());
+const contextMenu=createContextMenu(inspectorIcon,runAction);
+function openObjectMenu(x:number,y:number){
+  const {slide}=selected();if(!slide)return;
+  const elements=slide.elements.filter(e=>canvas.ids.includes(e.id));
+  const grouped=elements.some(e=>e.groupId);
+  const flow=elements.some(e=>isFlowElement(slide,e));
+  const groups:MenuItem[][]=[];
+  if(elements.length){
+    groups.push([
+      {action:"group",label:"Сгруппировать",icon:"group",shortcut:"Ctrl+G",disabled:elements.length<2},
+      {action:"ungroup",label:"Разгруппировать",icon:"group",shortcut:"Ctrl+Shift+G",disabled:!grouped},
+      {action:"duplicate",label:"Дублировать",icon:"copy",shortcut:"Ctrl+D"},
+    ],[
+      {action:"front",label:"На передний план",icon:"layers"},
+      {action:"back",label:"На задний план",icon:"layers"},
+    ]);
+    if(slide.layout)groups.push([
+      {action:flow?"layout-absolute":"layout-flow",label:flow?"Абсолютная позиция":"Вернуть в Auto Layout",icon:"absolute"},
+      ...(flow?[{action:"layout-previous",label:"Переместить раньше",icon:"left"},{action:"layout-next",label:"Переместить позже",icon:"right"}]:[]),
+      {action:"layout-settings",label:"Настройки Auto Layout",icon:"column"},
+    ]);
+  }else groups.push([{action:"layout-direction-column",label:"Auto Layout · вертикально",icon:"column",shortcut:"Shift+A"},
+    {action:"layout-direction-row",label:"Auto Layout · горизонтально",icon:"row"}]);
+  groups.push([{action:"source-code",label:"Код слайда",icon:"code"}]);
+  if(elements.length)groups.push([{action:"delete",label:"Удалить",icon:"trash",shortcut:"Del",danger:true}]);
+  contextMenu.open(x,y,groups);
+}
+shell.addEventListener("contextmenu",event=>{
+  if((event.target as HTMLElement).closest("[contenteditable=true]"))return;
+  event.preventDefault();
+  const {slide}=selected();
+  const id=(event.target as HTMLElement).closest<HTMLElement>(".cp-element")?.dataset.elementId;
+  if(id&&!canvas.ids.includes(id)){
+    const element=slide?.elements.find(e=>e.id===id);
+    canvas.select(element?.groupId?slide!.elements.filter(e=>e.groupId===element.groupId).map(e=>e.id):[id]);
+  }else if(!id&&!((event.target as HTMLElement).closest(".selection-box,.selection-multi-mark")))canvas.clear();
+  openObjectMenu(event.clientX,event.clientY);
+});
+$("inspector-more").addEventListener("click",event=>{
+  const box=(event.currentTarget as HTMLElement).getBoundingClientRect();openObjectMenu(box.right-236,box.bottom+6);
+});
+
 store.subscribe(() => {
   render();
   if (applyingRemote) return;
